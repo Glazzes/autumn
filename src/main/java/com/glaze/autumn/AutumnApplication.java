@@ -1,6 +1,8 @@
 package com.glaze.autumn;
 
 import com.glaze.autumn.models.Environment;
+import com.glaze.autumn.services.instantiator.ClassInstantiationService;
+import com.glaze.autumn.services.instantiator.SimpClassInstantiationService;
 import com.glaze.autumn.services.locator.ClassLocatorService;
 import com.glaze.autumn.services.locator.DirectoryClassLocatorService;
 import com.glaze.autumn.services.locator.JarFileClassLocatorService;
@@ -19,9 +21,19 @@ public class AutumnApplication {
     public static void run(Class<?> startUpClass){
         Environment environment = resolveEnvironmentForClass(startUpClass);
         ClassLocatorService locatorService = resolveClassLocatorServiceForType(environment.getType());
+
         Set<Class<?>> loadedClasses = locatorService.findAllProjectClasses(environment);
         ClassScannerService scannerService = new SimpClassScannerService(loadedClasses);
+
         System.out.println(scannerService.getSuitableClasses());
+
+        ClassInstantiationService instantiationService = new SimpClassInstantiationService(
+                scannerService.getSuitableClasses()
+        );
+
+        instantiationService.instantiateComponents();
+
+        System.out.println(instantiationService.getInstances());
     }
 
     private static Environment resolveEnvironmentForClass(Class<?> cls){

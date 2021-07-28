@@ -1,17 +1,15 @@
 package com.glaze.autumn.test;
 
-import com.glaze.autumn.shared.annotations.Autowired;
-import com.glaze.autumn.shared.annotations.Bean;
-import com.glaze.autumn.shared.annotations.Component;
-import com.glaze.autumn.shared.annotations.PostConstruct;
+import com.glaze.autumn.shared.annotations.*;
 
-@Component
+@Repository(id = "Cool")
 public class EpicService {
+
     @Autowired
     private final String autowiredString;
 
-    public EpicService(String autowiredString) {
-        this.autowiredString = autowiredString;
+    public EpicService() {
+        this.autowiredString = "";
     }
 
     @PostConstruct
@@ -22,6 +20,11 @@ public class EpicService {
     @Bean(id = "epicStringBean")
     public String someStringBean(){
         return "String bean";
+    }
+
+    @Bean
+    public Integer someIntegerBean(){
+        return 100;
     }
 
 }

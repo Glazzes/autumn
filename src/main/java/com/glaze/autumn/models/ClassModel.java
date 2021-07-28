@@ -64,7 +64,7 @@ public class ClassModel {
     @Override
     public String toString() {
         return "ClassModel{" +
-                "type=" + type +
+                ", type=" + type +
                 ", autowiredFields=" + Arrays.toString(autowiredFields) +
                 ", constructor=" + constructor +
                 ", instance=" + instance +
