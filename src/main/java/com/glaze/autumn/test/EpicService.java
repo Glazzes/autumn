@@ -1,6 +1,6 @@
 package com.glaze.autumn.test;
 
-import com.glaze.autumn.shared.annotations.*;
+import com.glaze.autumn.shared.annotation.*;
 
 @Repository(id = "Cool")
 public class EpicService {
@@ -8,7 +8,7 @@ public class EpicService {
     @Autowired
     private final String autowiredString;
 
-    public EpicService() {
+    public EpicService(ServiceFour serviceFour) {
         this.autowiredString = "";
     }
 

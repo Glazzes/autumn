@@ -1,7 +1,6 @@
 package com.glaze.autumn.test;
 
-import com.glaze.autumn.shared.annotations.Component;
-import com.glaze.autumn.shared.annotations.Service;
+import com.glaze.autumn.shared.annotation.Service;
 
 
 @Service(id = "Some super epic service")

@@ -2,8 +2,11 @@ plugins {
     id 'java'
 }
 
-group 'org.example'
-version '1.0-SNAPSHOT'
+group 'glaze'
+version '1.0'
+
+sourceCompatibility = JavaVersion.VERSION_16
+// targetCompatibility = JavaVersion.VERSION_1_8
 
 repositories {
     mavenCentral()
