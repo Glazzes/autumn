@@ -5,6 +5,7 @@ import com.glaze.autumn.model.InstantiationQueuedModel;
 import com.glaze.autumn.shared.annotation.*;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -32,59 +33,105 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
         }
     }
 
-    public void resolveDependencies(InstantiationQueuedModel model){
-        if(model.getClassModel().getConstructor().getParameterCount() == 0){
-            this.instantiateModelWithNoArgsConstructor(model);
+    public void resolveDependencies(InstantiationQueuedModel instantiationModel){
+        if(instantiationModel.getClassModel().getConstructor().getParameterCount() == 0){
+            this.instantiateModelWithNoArgsConstructor(instantiationModel);
         }else{
-            this.resolveConstructorDependencies(model);
+            this.resolveConstructorDependencies(instantiationModel);
         }
 
-        if(model.isResolved()){
-            this.instantiateModelIfResolved(model);
-        }else {
-            this.addModelBackToQueue(model);
-        }
+        this.attemptToInstantiateModel(instantiationModel);
     }
 
     private void instantiateModelWithNoArgsConstructor(InstantiationQueuedModel model){
         try{
             Object instance = model.getClassModel().getConstructor().newInstance();
-            String instanceId = this.generateClassId(model.getClassModel());
-            this.availableInstances.put(instanceId, instance);
-            this.instantiateBeans(model.getClassModel().getBeans(), instance);
+            model.setClsModelTypeInstance(instance);
+
+            if(!model.areAutowireFieldsDependenciesResolved()){
+                this.resolveAutowiredFieldsDependencies(model);
+                this.assignAutowiredFieldDependencies(model);
+            }
+
+            if(model.isModelResolved()){
+                String instanceId = this.generateClassId(model.getClassModel());
+                this.availableInstances.put(instanceId, instance);
+                this.instantiateBeans(model.getClassModel().getBeans(), model.getClsModelTypeInstance());
+            }
         }catch (InvocationTargetException | IllegalAccessException | InstantiationException e){
             e.printStackTrace();
         }
     }
 
-    private void resolveConstructorDependencies(InstantiationQueuedModel model){
-        for(int i = 0; i < model.getDependencyTypes().length; i++){
-            Class<?> dependencyType = model.getDependencyTypes()[i];
-            for (Map.Entry<String, Object> entry : availableInstances.entrySet()) {
-                if(entry.getValue().getClass().isAssignableFrom(dependencyType)
-                        && model.getDependencyInstances()[i] == null
-                ){
-                    model.getDependencyInstances()[i] = entry.getValue();
-                }
-            }
-        }
-    }
-
-    private void instantiateModelIfResolved(InstantiationQueuedModel model){
+    private void attemptToInstantiateModel(InstantiationQueuedModel model){
         try{
-            Constructor<?> classConstructor = model.getClassModel().getConstructor();
-            Object[] params = model.getDependencyInstances();
-            Object newInstance = classConstructor.newInstance(params);
-            String componentId = this.generateClassId(model.getClassModel());
-            availableInstances.put(componentId, newInstance);
-            this.instantiateBeans(model.getClassModel().getBeans(), newInstance);
+            this.resolveConstructorDependencies(model);
+
+            if(model.areConstructorDependenciesResolved()){
+                Constructor<?> classConstructor = model.getClassModel().getConstructor();
+                Object[] params = model.getConstructorDependencyInstances();
+                model.setClsModelTypeInstance(classConstructor.newInstance(params));
+
+                this.resolveAutowiredFieldsDependencies(model);
+                if(model.areAutowireFieldsDependenciesResolved()){
+                    this.assignAutowiredFieldDependencies(model);
+                }
+
+                if(model.isModelResolved()){
+                    String classId = this.generateClassId(model.getClassModel());
+                    this.availableInstances.put(classId, model.getClsModelTypeInstance());
+                    this.instantiateBeans(model.getBeans(), model.getClsModelTypeInstance());
+                }
+            }else{
+                this.queuedModels.addLast(model);
+            }
         }catch (InstantiationException | IllegalAccessException | InvocationTargetException e){
             e.printStackTrace();
         }
     }
 
-    private void addModelBackToQueue(InstantiationQueuedModel model){
-        this.queuedModels.addLast(model);
+    private void resolveConstructorDependencies(InstantiationQueuedModel model){
+        for(int i = 0; i < model.getConstructorDependencies().length; i++){
+            Class<?> dependencyType = model.getConstructorDependencies()[i];
+            for (Object dependency : availableInstances.values()) {
+                if(dependency.getClass().isAssignableFrom(dependencyType)
+                        && model.getConstructorDependencyInstances()[i] == null
+                ){
+                    model.getConstructorDependencyInstances()[i] = dependency;
+                }
+            }
+        }
+    }
+
+    private void resolveAutowiredFieldsDependencies(InstantiationQueuedModel model){
+        Field[] autowiredFields = model.getAutowiredFields();
+        if(autowiredFields == null) return;
+
+        for(int i = 0; i < autowiredFields.length; i++){
+            Class<?> fieldType = autowiredFields[i].getType();
+            for (Object dependency : this.availableInstances.values()) {
+                if(dependency.getClass().isAssignableFrom(fieldType)){
+                    model.getAutowiredFieldDependencyInstances()[i] = dependency;
+                }
+            }
+        }
+    }
+
+    private void assignAutowiredFieldDependencies(InstantiationQueuedModel model){
+        if(model.getAutowiredFields() == null) return;
+        if(model.getAutowiredFields().length == 0) return;
+
+        Object instance = model.getClsModelTypeInstance();
+        Field[] autowiredFields = model.getAutowiredFields();
+        for(int i = 0; i < autowiredFields.length; i++){
+            Field autowiredField = autowiredFields[i];
+            Object autowiredFieldDependency = model.getAutowiredFieldDependencyInstances()[i];
+            try {
+                autowiredField.set(instance, autowiredFieldDependency);
+            }catch (IllegalAccessException e){
+                e.printStackTrace();
+            }
+        }
     }
 
     private String generateClassId(ClassModel model){

@@ -44,8 +44,7 @@ public class AutumnApplication {
     private static void isStartUpClassValid(Class<?> cls) throws AutumnApplicationException{
         if(!cls.isAnnotationPresent(com.glaze.autumn.shared.annotation.AutumnApplication.class)){
             String errorMessage = String.format("""
-            Startup class %s must annotated with @AutumnApplication annotation        
-            """, cls.getTypeName());
+            Startup class %s must annotated with @AutumnApplication annotation""", cls.getTypeName());
 
             throw new AutumnApplicationException(errorMessage);
         }

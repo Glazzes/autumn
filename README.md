@@ -9,3 +9,8 @@ into your classes
 The main goal of this project is to get a decent understanding
 of how java.lang.reflect package can be used to manipulate bytecode
 at execution time to create new libraries.
+
+### Features
+* Field based injection
+* Constructor based injection 
+* Circular dependency detection
