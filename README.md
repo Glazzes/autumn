@@ -11,6 +11,7 @@ of how java.lang.reflect package can be used to manipulate bytecode
 at execution time to create new libraries.
 
 ### Features
-* Field based injection
-* Constructor based injection 
-* Circular dependency detection
+* Field based injection (WIP)
+* Constructor based injection (Done)
+* Bean method instantiation (Done) 
+* Circular dependency detection (Almost completed)

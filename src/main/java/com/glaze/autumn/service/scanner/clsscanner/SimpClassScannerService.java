@@ -48,7 +48,6 @@ public class SimpClassScannerService implements ClassScannerService {
                 .collect(Collectors.toSet());
     }
 
-
     private boolean filterForClassesOnly(Class<?> cls){
         return !cls.isInterface()
                && !cls.isEnum()

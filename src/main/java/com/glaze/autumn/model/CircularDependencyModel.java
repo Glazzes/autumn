@@ -6,12 +6,12 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class CyclicDependencyModel {
+public class CircularDependencyModel {
     private final ClassModel classModel;
     private final Field[] autowiredFields;
     private final Class<?>[] constructorDependencyTypes;
 
-    public CyclicDependencyModel(ClassModel model){
+    public CircularDependencyModel(ClassModel model){
         this.classModel = model;
         this.constructorDependencyTypes = model.getConstructor().getParameterTypes();
         this.autowiredFields = model.getAutowiredFields();
