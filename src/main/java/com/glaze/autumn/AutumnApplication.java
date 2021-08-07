@@ -2,13 +2,15 @@ package com.glaze.autumn;
 
 import com.glaze.autumn.model.ClassModel;
 import com.glaze.autumn.model.Environment;
+import com.glaze.autumn.service.instantiator.ClassInstantiationService;
+import com.glaze.autumn.service.instantiator.SimpClassInstantiationService;
 import com.glaze.autumn.service.locator.ClassLocatorService;
 import com.glaze.autumn.service.locator.DirectoryClassLocatorService;
 import com.glaze.autumn.service.locator.JarFileClassLocatorService;
 import com.glaze.autumn.service.scanner.clsscanner.ClassScannerService;
 import com.glaze.autumn.service.scanner.clsscanner.SimpClassScannerService;
-import com.glaze.autumn.service.scanner.circularscanner.CircularDependencyInjectionScannerService;
-import com.glaze.autumn.service.scanner.circularscanner.SimpCircularDependencyInjectionScannerService;
+import com.glaze.autumn.service.scanner.circularscanner.CircularDependencyDetectionService;
+import com.glaze.autumn.service.scanner.circularscanner.SimpCircularDependencyDetectionService;
 import com.glaze.autumn.shared.constant.FileConstants;
 import com.glaze.autumn.shared.enums.EnvironmentType;
 import com.glaze.autumn.shared.exception.AutumnApplicationException;
@@ -32,13 +34,11 @@ public class AutumnApplication {
         ClassScannerService scannerService = new SimpClassScannerService(loadedClasses);
         Set<ClassModel> suitableClasses =  scannerService.getSuitableClasses();
 
-        CircularDependencyInjectionScannerService circularDependencyInjectionScannerService = new SimpCircularDependencyInjectionScannerService(suitableClasses);
-        circularDependencyInjectionScannerService.lookForCircularDependencies();
+        CircularDependencyDetectionService circularDependencyDetectionService = new SimpCircularDependencyDetectionService(suitableClasses);
+        circularDependencyDetectionService.lookForCircularDependencies();
 
-        /*
         ClassInstantiationService instantiationService = new SimpClassInstantiationService(suitableClasses);
         instantiationService.instantiateComponents();
-         */
     }
 
     private static void isStartUpClassValid(Class<?> cls) throws AutumnApplicationException{

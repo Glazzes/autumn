@@ -8,12 +8,12 @@ import com.glaze.autumn.shared.exception.CircularDependencyInjectionException;
 
 import java.util.*;
 
-public class SimpCircularDependencyInjectionScannerService implements CircularDependencyInjectionScannerService {
+public class SimpCircularDependencyDetectionService implements CircularDependencyDetectionService {
     private final Map<Class<?>, CircularDependencyModel> circularModels = new HashMap<>();
     private final CyclicDependencyInjectionMessageFormatter errorMessageFormatter = new
             SimpCyclicDependencyInjectionMessageFormatter();
 
-    public SimpCircularDependencyInjectionScannerService(Set<ClassModel> classModels){
+    public SimpCircularDependencyDetectionService(Set<ClassModel> classModels){
         classModels.stream()
                 .map(CircularDependencyModel::new)
                 .sorted(Comparator.comparing(model -> model.getAllRequiredDependencies().length))
@@ -38,24 +38,24 @@ public class SimpCircularDependencyInjectionScannerService implements CircularDe
 
     private void lookForCircularDependenciesOnSubNodes(Class<?> rootClass, Class<?>[] rootClassDependencies) throws CircularDependencyInjectionException {
         for (Class<?> dependency : rootClassDependencies) {
-            Set<Class<?>> cyclicDependencies = this.lookUpForCircularDependenciesRecursively(
+            List<Class<?>> circularDependencies = this.lookUpForCircularDependenciesRecursively(
                     rootClass,
                     dependency,
-                    new HashSet<>()
+                    new LinkedList<>()
                     );
 
-            if(cyclicDependencies != null){
-                cyclicDependencies.add(dependency);
-                Class<?>[] circularDependencies = cyclicDependencies.toArray(Class[]::new);
-                this.failOnRootCDFound(circularDependencies);
+            if(circularDependencies != null){
+                circularDependencies.add(dependency);
+                Collections.reverse(circularDependencies);
+                Class<?>[] circularDependenciesArr = circularDependencies.toArray(Class[]::new);
+                this.failOnRootCDFound(circularDependenciesArr);
             }
         }
     }
 
-    private void failOnRootCDFound(Class<?>[] circularDependencies){
+    private void failOnRootCDFound(Class<?>[] circularDependencies) {
         String errorMessage = errorMessageFormatter.getRootNodeErrorMessage(circularDependencies);
-        System.out.println(errorMessage);
-        // throw new CircularDependencyInjectionException(errorMessage);
+        throw new CircularDependencyInjectionException(errorMessage);
     }
 
     private Class<?>[] getClassDependencies(Class<?> cls){
@@ -70,39 +70,43 @@ public class SimpCircularDependencyInjectionScannerService implements CircularDe
                 });
     }
 
-    private void failOnSubNodesCDFound(Class<?> rootClass, Class<?> causedBy, Set<Class<?>> circularDependencies){
+    private void failOnSubNodesCDFound(Class<?> rootClass, Class<?> causedBy, List<Class<?>> circularDependencies){
+        Class<?>[] circularDependencyArr = circularDependencies.toArray(Class<?>[]::new);
         String errorMessage = errorMessageFormatter.getMessageOnSubNodesError(
                 rootClass,
                 causedBy,
-                circularDependencies
+                circularDependencyArr
         );
 
-        System.out.println(errorMessage);
-        //throw new CircularDependencyInjectionException(errorMessage);
+        System.out.println(Arrays.toString(circularDependencyArr));
+        throw new CircularDependencyInjectionException(errorMessage);
     }
 
     /*
     A circular dependency on the root node can be spotted when the root node type is found somewhere else
     within the tree hierarchy.
-    For sub nodes it works almost the same, since it checks whether the rootClass and sub node class are equals,
-    a helper collection is needed to spot this circular dependency among sub nodes.
+
+    A circular dependency can also appear among sub nodes where the root class is not present, therefore causing
+    a StackOverflowError because this method checks whether the root class and current class are equals.
+    In order to spot a circular dependency on sub nodes a helper collection is used to save all classes in the
+    current tree branch if no circular dependency was present, this helper collection gets cleaned up for the
+    next branch to use.
     */
-    private Set<Class<?>> lookUpForCircularDependenciesRecursively(
+    private List<Class<?>> lookUpForCircularDependenciesRecursively(
             Class<?> rootClass,
             Class<?> currentClass,
-            Set<Class<?>> subNodeCDHelper
-            ){
-        if(rootClass.equals(currentClass)) return new HashSet<>();
+            LinkedList<Class<?>> subNodeCDHelper
+    ){
+        if(rootClass.equals(currentClass)) return new ArrayList<>();
 
         Class<?>[] currentClassDependencies = this.getClassDependencies(currentClass);
-
         for(Class<?> dependency : currentClassDependencies) {
-            Set<Class<?>> scanResult = this.lookUpForCircularDependenciesRecursively(rootClass, dependency, subNodeCDHelper);
-
             if(subNodeCDHelper.contains(dependency)){
-                System.out.println("I've got it");
+                this.failOnSubNodesCDFound(rootClass, dependency, subNodeCDHelper);
             }
             subNodeCDHelper.add(dependency);
+
+            List<Class<?>> scanResult = this.lookUpForCircularDependenciesRecursively(rootClass, dependency, subNodeCDHelper);
 
             if(scanResult != null){
                 scanResult.add(dependency);
@@ -110,6 +114,7 @@ public class SimpCircularDependencyInjectionScannerService implements CircularDe
             }
         }
 
+        subNodeCDHelper.removeLast();
         return null;
     }
 

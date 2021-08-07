@@ -7,7 +7,7 @@ import com.glaze.autumn.shared.annotation.Service;
 public class ServiceFive {
 
     @Autowired
-    public ServiceFive(ServiceFour serviceFour){
+    public ServiceFive(EpicService serviceFour){
 
     }
 }

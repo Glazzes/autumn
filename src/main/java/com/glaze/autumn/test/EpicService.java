@@ -8,7 +8,7 @@ public class EpicService {
     @Autowired
     private final String autowiredString;
 
-    public EpicService(ServiceFour serviceTwo) {
+    public EpicService(ServiceThree serviceTwo) {
         this.autowiredString = "";
     }
 
