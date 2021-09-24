@@ -1,7 +1,7 @@
 ## Autumn DI container
 
 ### About this project
-Spring boot is by far the most used JEE based web framework used today and
+Spring boot is by far the most used Java web framework today and
 something that caught my eye was the dependency injection
 container and how it "magically" injects the right instances 
 into your classes.
@@ -11,7 +11,8 @@ of how java.lang.reflect package can be used to manipulate bytecode
 at execution time to create new libraries.
 
 ### Features
-* Field based injection (WIP)
-* Constructor based injection (Done)
-* Bean method instantiation (Done)
-* Circular dependency detection (Done)
+* Field based injection
+* @Qualifer bean injection  
+* Constructor based injection
+* Bean method instantiation
+* Circular dependency injection detection

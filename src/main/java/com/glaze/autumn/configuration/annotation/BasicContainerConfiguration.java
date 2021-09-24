@@ -1,9 +1,9 @@
 package com.glaze.autumn.configuration.annotation;
 
-import com.glaze.autumn.shared.annotation.Bean;
-import com.glaze.autumn.shared.annotation.Component;
-import com.glaze.autumn.shared.annotation.Repository;
-import com.glaze.autumn.shared.annotation.Service;
+import com.glaze.autumn.annotations.Bean;
+import com.glaze.autumn.annotations.Component;
+import com.glaze.autumn.annotations.Repository;
+import com.glaze.autumn.annotations.Service;
 
 import java.lang.annotation.Annotation;
 import java.util.Collection;

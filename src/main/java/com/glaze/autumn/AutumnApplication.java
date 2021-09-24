@@ -1,23 +1,23 @@
 package com.glaze.autumn;
 
-import com.glaze.autumn.model.ClassModel;
-import com.glaze.autumn.model.Environment;
-import com.glaze.autumn.service.instantiator.ClassInstantiationService;
-import com.glaze.autumn.service.instantiator.SimpClassInstantiationService;
-import com.glaze.autumn.service.locator.ClassLocatorService;
-import com.glaze.autumn.service.locator.DirectoryClassLocatorService;
-import com.glaze.autumn.service.locator.JarFileClassLocatorService;
-import com.glaze.autumn.service.scanner.clsscanner.ClassScannerService;
-import com.glaze.autumn.service.scanner.clsscanner.SimpClassScannerService;
-import com.glaze.autumn.service.scanner.circularscanner.CircularDependencyDetectionService;
-import com.glaze.autumn.service.scanner.circularscanner.SimpCircularDependencyDetectionService;
+import com.glaze.autumn.circulardependency.model.CircularDependencyModel;
+import com.glaze.autumn.circulardependency.service.SimpCircularDependencyDetectionService;
+import com.glaze.autumn.clscanner.model.ClassModel;
+import com.glaze.autumn.clslocator.model.Environment;
+import com.glaze.autumn.instantiator.service.ClassInstantiationService;
+import com.glaze.autumn.instantiator.service.SimpClassInstantiationService;
+import com.glaze.autumn.clslocator.service.ClassLocatorService;
+import com.glaze.autumn.clslocator.service.DirectoryClassLocatorService;
+import com.glaze.autumn.clslocator.service.JarFileClassLocatorService;
+import com.glaze.autumn.clscanner.service.ClassScannerService;
+import com.glaze.autumn.clscanner.service.SimpClassScannerService;
 import com.glaze.autumn.shared.constant.FileConstants;
-import com.glaze.autumn.shared.enums.EnvironmentType;
+import com.glaze.autumn.clslocator.enums.EnvironmentType;
 import com.glaze.autumn.shared.exception.AutumnApplicationException;
 
-import java.util.Set;
+import java.util.*;
 
-@com.glaze.autumn.shared.annotation.AutumnApplication
+@com.glaze.autumn.annotations.AutumnApplication
 public class AutumnApplication {
 
     public static void main(String[] args) {
@@ -32,17 +32,17 @@ public class AutumnApplication {
 
         Set<Class<?>> loadedClasses = locatorService.findAllProjectClasses(environment);
         ClassScannerService scannerService = new SimpClassScannerService(loadedClasses);
-        Set<ClassModel> suitableClasses =  scannerService.getSuitableClasses();
 
-        CircularDependencyDetectionService circularDependencyDetectionService = new SimpCircularDependencyDetectionService(suitableClasses);
-        circularDependencyDetectionService.lookForCircularDependencies();
+        Set<ClassModel> suitableClasses =  scannerService.findSuitableClasses();
+
+        scanCircularDependencies(suitableClasses);
 
         ClassInstantiationService instantiationService = new SimpClassInstantiationService(suitableClasses);
         instantiationService.instantiateComponents();
     }
 
     private static void isStartUpClassValid(Class<?> cls) throws AutumnApplicationException{
-        if(!cls.isAnnotationPresent(com.glaze.autumn.shared.annotation.AutumnApplication.class)){
+        if(!cls.isAnnotationPresent(com.glaze.autumn.annotations.AutumnApplication.class)){
             String errorMessage = String.format("""
             Startup class %s must annotated with @AutumnApplication annotation""", cls.getTypeName());
 
@@ -68,4 +68,20 @@ public class AutumnApplication {
                 ? new DirectoryClassLocatorService()
                 : new JarFileClassLocatorService();
     }
+
+    private static void scanCircularDependencies(Set<ClassModel> suitableClasses){
+        List<CircularDependencyModel> models = suitableClasses.stream()
+                .map(CircularDependencyModel::new)
+                .sorted(Comparator.comparing(model -> model.getAllRequiredDependencies().length))
+                .toList();
+
+        Map<Class<?>, CircularDependencyModel> circularModels = new HashMap<>();
+        for(CircularDependencyModel model : models){
+            circularModels.put(model.getType(), model);
+        }
+
+        var circularDependencyDetectionService = new SimpCircularDependencyDetectionService(circularModels);
+        circularDependencyDetectionService.scan();
+    }
+
 }
