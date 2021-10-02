@@ -12,7 +12,7 @@ at execution time to create new libraries.
 
 ### Features
 * Field based injection
-* @Qualifer bean injection  
+* @Qualifer field bean injection  
 * Constructor based injection
 * Bean method instantiation
 * Circular dependency injection detection

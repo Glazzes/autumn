@@ -12,7 +12,7 @@ import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class SimpClassInstantiationService implements ClassInstantiationService {
+public final class SimpClassInstantiationService implements ClassInstantiationService, MissingDependencyScanner {
     private final LinkedList<InstantiationQueuedModel> queuedModels;
     private final LinkedHashMap<String, Object> availableInstances = new LinkedHashMap<>();
 
@@ -27,70 +27,42 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
     public void instantiateComponents() {
         int counter = 0;
         while (!queuedModels.isEmpty()){
-            if(counter > 100) break;
+            if(counter > 1000) break;
             InstantiationQueuedModel queuedModel = queuedModels.removeFirst();
-            resolveDependencies(queuedModel);
+            attemptInstantiation(queuedModel);
             counter++;
         }
-    }
 
-    public void resolveDependencies(InstantiationQueuedModel instantiationModel){
-        int parameterCount = instantiationModel.getClassModel()
-                .getConstructor()
-                .getParameterCount();
-
-        if(parameterCount == 0){
-            this.instantiateModelWithNoArgsConstructor(instantiationModel);
-        }else{
-            this.resolveConstructorDependencies(instantiationModel);
-        }
-
-        this.attemptInstantiation(instantiationModel);
-    }
-
-    private void instantiateModelWithNoArgsConstructor(InstantiationQueuedModel model){
-        try{
-            Object instance = model.getClassModel()
-                    .getConstructor()
-                    .newInstance();
-
-            model.setInstance(instance);
-            if(!model.hasAutowiredFieldsResolved()){
-                this.resolveAutowiredFieldsDependencies(model);
-                this.assignAutowiredFieldDependencies(model);
-            }
-
-            if(model.isModelResolved()){
-                String instanceId = this.generateClassId(model.getClassModel());
-                this.availableInstances.put(instanceId, instance);
-                this.instantiateBeans(model.getClassModel().getBeans(), model.getInstance());
-            }
-        }catch (InvocationTargetException | IllegalAccessException | InstantiationException e){
-            e.printStackTrace();
+        if(queuedModels.size() > 0){
+            scanMissingAutowiredDependencies();
+            scanMissingConstructorDependencies();
         }
     }
 
     private void attemptInstantiation(InstantiationQueuedModel model){
         try{
             this.resolveConstructorDependencies(model);
-
-            if(model.hasConstructorDependenciesResolved()){
+            if(model.hasConstructorDependenciesResolved() && model.getInstance() == null) {
                 Constructor<?> classConstructor = model.getClassModel().getConstructor();
                 Object[] params = model.getConstructorDependencyInstances();
-                model.setInstance(classConstructor.newInstance(params));
+                Object instance = classConstructor.newInstance(params);
+                model.setInstance(instance);
+            }
 
-                this.resolveAutowiredFieldsDependencies(model);
-                if(model.hasAutowiredFieldsResolved()){
-                    this.assignAutowiredFieldDependencies(model);
-                }
+            this.resolveAutowiredFieldsDependencies(model);
+            if(model.hasAutowiredFieldsResolved()){
+                this.assignAutowiredFieldDependencies(model);
+            }
 
-                if(model.isModelResolved()){
-                    String classId = this.generateClassId(model.getClassModel());
-                    this.availableInstances.put(classId, model.getInstance());
-                    this.instantiateBeans(model.getBeans(), model.getInstance());
-                }
+            if(model.isModelResolved()){
+                String classId = this.generateClassId(model.getClassModel());
+                System.out.println(classId);
+                this.availableInstances.put(classId, model.getInstance());
+                this.instantiateBeans(model.getBeans(), model.getInstance());
+
+                this.invokePostConstructMethod(model);
             }else{
-                this.queuedModels.addLast(model);
+                queuedModels.addLast(model);
             }
         }catch (InstantiationException | IllegalAccessException | InvocationTargetException e){
             e.printStackTrace();
@@ -110,13 +82,27 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
         }
     }
 
+    private void invokePostConstructMethod(InstantiationQueuedModel model){
+        try{
+            Object instance = model.getInstance();
+            Method postConstruct = model.getClassModel()
+                    .getPostConstruct();
+
+            if(postConstruct != null){
+                postConstruct.invoke(instance);
+            }
+        }catch (IllegalAccessException|InvocationTargetException e){
+            e.printStackTrace();
+        }
+    }
+
     private void resolveAutowiredFieldsDependencies(InstantiationQueuedModel model){
         Field[] autowiredFields = model.getAutowiredFields();
         if(autowiredFields == null) return;
 
         for(int i = 0; i < autowiredFields.length; i++){
             Field currentField = autowiredFields[i];
-            Class<?> fieldType =currentField.getType();
+            Class<?> fieldType = currentField.getType();
 
             if(currentField.isAnnotationPresent(Qualifier.class)){
                 Qualifier qualifier = currentField.getAnnotation(Qualifier.class);
@@ -126,23 +112,22 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
                         qualifier.id()
                 );
 
-                Object dependency = this.availableInstances.get(componentId);
-                if(dependency == null){
-                    String errorMessage = String.format("""
-                    A bean of type %s with id %s was required by %s but could not be found or instantiated
-                    """, currentField.getType().getTypeName(), qualifier.id(), model.getClassModel().getType());
-                    throw new ComponentNotFoundException(errorMessage);
+
+                Object dependency = availableInstances.get(componentId);
+                if(dependency != null){
+                    model.getAutowiredFieldDependencyInstances()[i] = dependency;
                 }
 
-                model.getAutowiredFieldDependencyInstances()[i] = dependency;
-                return;
+                continue;
             }
 
             for (Object dependency : this.availableInstances.values()) {
-                if(dependency.getClass().isAssignableFrom(fieldType)){
+                if(dependency.getClass().isAssignableFrom(fieldType)
+                   && model.getAutowiredFieldDependencyInstances()[i] == null){
                     model.getAutowiredFieldDependencyInstances()[i] = dependency;
                 }
             }
+
         }
     }
 
@@ -221,6 +206,57 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
         }
 
         return String.format("%s-%s", beanType, id);
+    }
+
+    @Override
+    public void scanMissingAutowiredDependencies() {
+        for(InstantiationQueuedModel model : queuedModels){
+            if(model.getAutowiredFields() == null) continue;
+
+            Field[] autowiredFields = model.getAutowiredFields();
+            for(int field = 0; field < autowiredFields.length; field++){
+                if(model.getAutowiredFieldDependencyInstances()[field] == null){
+                    if(autowiredFields[field].isAnnotationPresent(Qualifier.class)){
+                        Qualifier qualifier = autowiredFields[field].getAnnotation(Qualifier.class);
+                        String errorMessage = String.format(
+                                "%s required a bean of type %s with id %s that could not be found, consider declaring one",
+                                model.getClassModel().getType(),
+                                autowiredFields[field].getType().getTypeName(),
+                                qualifier.id()
+                        );
+
+                        throw new ComponentNotFoundException(errorMessage);
+                    }
+
+                    String errorMessage = String.format(
+                            "%s required a bean of type %s that could not be found, consider declaring one",
+                            model.getClassModel().getType(),
+                            autowiredFields[field].getType().getTypeName()
+                    );
+
+                    throw new ComponentNotFoundException(errorMessage);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void scanMissingConstructorDependencies() {
+        for(InstantiationQueuedModel model : queuedModels){
+            Class<?>[] constructorDependencies = model.getConstructorDependencies();
+            for(int dep = 0; dep < constructorDependencies.length; dep++){
+                Object dependency = model.getAutowiredFieldDependencyInstances()[dep];
+                if(dependency == null){
+                    String errorMessage = String.format(
+                    "%s's required a bean of type %s that could not be found, consider declaring one.",
+                           model.getClassModel().getType(),
+                           model.getConstructorDependencies()[dep]
+                    );
+
+                    throw new ComponentNotFoundException(errorMessage);
+                }
+            }
+        }
     }
 
     @Override

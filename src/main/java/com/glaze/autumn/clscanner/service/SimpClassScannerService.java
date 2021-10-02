@@ -17,17 +17,14 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class SimpClassScannerService implements ClassScannerService {
-    private final Set<Class<?>> locatedClasses;
-    private final AnnotationConfiguration annotationConfiguration;
+    private Set<Class<?>> locatedClasses;
+    private AnnotationConfiguration annotationConfiguration;
+
+    public SimpClassScannerService(){}
 
     public SimpClassScannerService(Set<Class<?>> locatedClasses){
         this.locatedClasses = locatedClasses;
         this.annotationConfiguration = new BasicContainerConfiguration();
-    }
-
-    public SimpClassScannerService(Set<Class<?>> locatedClasses, AnnotationConfiguration configuration){
-        this.locatedClasses = locatedClasses;
-        this.annotationConfiguration = configuration;
     }
 
     @Override
@@ -35,18 +32,24 @@ public class SimpClassScannerService implements ClassScannerService {
         return this.locatedClasses.stream()
                 .filter(this::findClassFiles)
                 .filter(this::findComponentClasses)
-                .map(cls -> {
-                    ClassModel clsModel = new ClassModel();
-                    clsModel.setType(cls);
-                    clsModel.setAutowiredFields(this.getAutowiredFields(cls));
-                    clsModel.setConstructor(this.getSuitableConstructor(cls));
-                    clsModel.setPostConstruct(this.getPostConstructMethod(cls));
-                    clsModel.setBeans(this.getBeanMethods(cls));
-                    clsModel.setIsStartUpClass(this.isStartUpClass(cls));
-
-                    return clsModel;
-                })
+                .map(this::newClassModelInstance)
                 .collect(Collectors.toSet());
+    }
+
+    public ClassModel scanMainClasses(Class<?> cls){
+        return this.newClassModelInstance(cls);
+    }
+
+    private ClassModel newClassModelInstance(Class<?> cls){
+        ClassModel clsModel = new ClassModel();
+        clsModel.setType(cls);
+        clsModel.setAutowiredFields(this.getAutowiredFields(cls));
+        clsModel.setConstructor(this.getSuitableConstructor(cls));
+        clsModel.setPostConstruct(this.getPostConstructMethod(cls));
+        clsModel.setBeans(this.getBeanMethods(cls));
+        clsModel.setIsStartUpClass(this.isStartUpClass(cls));
+
+        return clsModel;
     }
 
     private boolean findClassFiles(Class<?> cls){

@@ -31,6 +31,11 @@ public class SimpCircularDependencyDetectionService implements CircularDependenc
             this.onRootNodeCircularDependency(nodes.toArray(Class[]::new));
         }
 
+        if(rootClass == currentClass){
+            String errorMessage = rootClass + " has a dependency on itself that can not be satisfied, consider refactoring";
+            throw new CircularDependencyInjectionException(errorMessage);
+        }
+
         if(nodes.contains(currentClass)){
             if(nodes.indexOf(currentClass) != nodes.size() - 1){
                 this.onSubNodeCircularDependency(rootClass, currentClass, nodes);
@@ -65,7 +70,6 @@ public class SimpCircularDependencyDetectionService implements CircularDependenc
                 circularDependencyArr
         );
 
-        System.out.println(Arrays.toString(circularDependencyArr));
         throw new CircularDependencyInjectionException(errorMessage);
     }
 

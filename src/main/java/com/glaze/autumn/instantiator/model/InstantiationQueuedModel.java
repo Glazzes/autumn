@@ -1,6 +1,8 @@
 package com.glaze.autumn.instantiator.model;
 
+import com.glaze.autumn.annotations.Qualifier;
 import com.glaze.autumn.clscanner.model.ClassModel;
+import com.glaze.autumn.instantiator.exception.ComponentNotFoundException;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -29,6 +31,11 @@ public class InstantiationQueuedModel {
         this.beans = classModel.getBeans();
     }
 
+    public boolean isModelResolved(){
+        return this.hasConstructorDependenciesResolved()
+                && this.hasAutowiredFieldsResolved();
+    }
+
     public boolean hasConstructorDependenciesResolved(){
         if(this.constructorDependencyInstances.length == 0) return true;
         return Arrays.stream(this.constructorDependencyInstances)
@@ -37,14 +44,38 @@ public class InstantiationQueuedModel {
 
     public boolean hasAutowiredFieldsResolved(){
         if(this.autowiredFields == null) return true;
-        if(this.autowiredFields.length == 0) return true;
+        if(this.autowiredFieldDependencyInstances.length == 0) return true;
         return Arrays.stream(this.autowiredFieldDependencyInstances)
                 .noneMatch(Objects::isNull);
     }
 
-    public boolean isModelResolved(){
-        return this.hasConstructorDependenciesResolved()
-                && this.hasAutowiredFieldsResolved();
+    public void onUnresolvedAutowiredFieldDependencies(){
+        if(this.autowiredFields == null) return;
+
+        for(int dep = 0; dep < autowiredFields.length; dep++){
+            Field currentField = autowiredFields[dep];
+            if(currentField.isAnnotationPresent(Qualifier.class) && autowiredFieldDependencyInstances[dep] == null){
+                Qualifier qualifier = currentField.getAnnotation(Qualifier.class);
+                String errorMessage = String.format("""
+                %s required a bean of type %s with id %s that could not be found, consider declaring one.
+                """, classModel.getType(), currentField.getType(), qualifier.id());
+
+                throw new ComponentNotFoundException(errorMessage);
+            }
+        }
+    }
+
+    public void onUnresolvedConstructorDependencies(){
+        for(int dep = 0; dep < constructorDependencies.length; dep++){
+            if(constructorDependencyInstances[dep] == null){
+                Class<?> type = classModel.getType();
+                String errorMessage = String.format("""
+                Constructor of %s required a bean of type %s that could not be found or instantiated properly
+                """, type, constructorDependencies[dep]);
+
+                throw new ComponentNotFoundException(errorMessage);
+            }
+        }
     }
 
     public ClassModel getClassModel() {
