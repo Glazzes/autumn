@@ -5,7 +5,6 @@ import com.glaze.autumn.configuration.annotation.AnnotationConfiguration;
 import com.glaze.autumn.configuration.annotation.BasicContainerConfiguration;
 import com.glaze.autumn.clscanner.model.ClassModel;
 import com.glaze.autumn.annotations.Autowired;
-import com.glaze.autumn.annotations.AutumnApplication;
 import com.glaze.autumn.annotations.Bean;
 import com.glaze.autumn.annotations.PostConstruct;
 
@@ -28,7 +27,7 @@ public class SimpClassScannerService implements ClassScannerService {
     }
 
     @Override
-    public Set<ClassModel> findSuitableClasses() {
+    public Set<ClassModel> scan() {
         return this.locatedClasses.stream()
                 .filter(this::findClassFiles)
                 .filter(this::findComponentClasses)
@@ -47,7 +46,6 @@ public class SimpClassScannerService implements ClassScannerService {
         clsModel.setConstructor(this.getSuitableConstructor(cls));
         clsModel.setPostConstruct(this.getPostConstructMethod(cls));
         clsModel.setBeans(this.getBeanMethods(cls));
-        clsModel.setIsStartUpClass(this.isStartUpClass(cls));
 
         return clsModel;
     }
@@ -63,10 +61,6 @@ public class SimpClassScannerService implements ClassScannerService {
         return annotationConfiguration.getComponentAnnotations()
                 .stream()
                 .anyMatch(cls::isAnnotationPresent);
-    }
-
-    private boolean isStartUpClass(Class<?> cls){
-        return cls.isAnnotationPresent(AutumnApplication.class);
     }
 
     private Field[] getAutowiredFields(Class<?> cls){

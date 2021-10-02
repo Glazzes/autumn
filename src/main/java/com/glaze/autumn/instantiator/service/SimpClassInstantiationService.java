@@ -12,9 +12,9 @@ import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public final class SimpClassInstantiationService implements ClassInstantiationService, MissingDependencyScanner {
+public class SimpClassInstantiationService implements ClassInstantiationService, MissingDependencyScanner {
     private final LinkedList<InstantiationQueuedModel> queuedModels;
-    private final LinkedHashMap<String, Object> availableInstances = new LinkedHashMap<>();
+    private final Map<String, Object> availableInstances = new HashMap<>();
 
     public SimpClassInstantiationService(Set<ClassModel> clsModels){
         this.queuedModels = clsModels.stream()
@@ -37,6 +37,8 @@ public final class SimpClassInstantiationService implements ClassInstantiationSe
             scanMissingAutowiredDependencies();
             scanMissingConstructorDependencies();
         }
+
+        System.out.println(availableInstances);
     }
 
     private void attemptInstantiation(InstantiationQueuedModel model){
@@ -56,7 +58,6 @@ public final class SimpClassInstantiationService implements ClassInstantiationSe
 
             if(model.isModelResolved()){
                 String classId = this.generateClassId(model.getClassModel());
-                System.out.println(classId);
                 this.availableInstances.put(classId, model.getInstance());
                 this.instantiateBeans(model.getBeans(), model.getInstance());
 
@@ -69,7 +70,7 @@ public final class SimpClassInstantiationService implements ClassInstantiationSe
         }
     }
 
-    private void resolveConstructorDependencies(InstantiationQueuedModel model){
+    public void resolveConstructorDependencies(InstantiationQueuedModel model){
         for(int i = 0; i < model.getConstructorDependencies().length; i++){
             Class<?> dependencyType = model.getConstructorDependencies()[i];
             for (Object dependency : availableInstances.values()) {
@@ -82,7 +83,7 @@ public final class SimpClassInstantiationService implements ClassInstantiationSe
         }
     }
 
-    private void invokePostConstructMethod(InstantiationQueuedModel model){
+    public void invokePostConstructMethod(InstantiationQueuedModel model){
         try{
             Object instance = model.getInstance();
             Method postConstruct = model.getClassModel()
@@ -96,7 +97,7 @@ public final class SimpClassInstantiationService implements ClassInstantiationSe
         }
     }
 
-    private void resolveAutowiredFieldsDependencies(InstantiationQueuedModel model){
+    public void resolveAutowiredFieldsDependencies(InstantiationQueuedModel model){
         Field[] autowiredFields = model.getAutowiredFields();
         if(autowiredFields == null) return;
 

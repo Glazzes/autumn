@@ -1,10 +1,10 @@
 package com.glaze.autumn;
 
-import com.glaze.autumn.annotations.Autowired;
 import com.glaze.autumn.circulardependency.model.CircularDependencyModel;
 import com.glaze.autumn.circulardependency.service.SimpCircularDependencyDetectionService;
 import com.glaze.autumn.clscanner.model.ClassModel;
 import com.glaze.autumn.clslocator.model.Environment;
+import com.glaze.autumn.instantiator.model.InstantiationQueuedModel;
 import com.glaze.autumn.instantiator.service.ClassInstantiationService;
 import com.glaze.autumn.instantiator.service.SimpClassInstantiationService;
 import com.glaze.autumn.clslocator.service.ClassLocatorService;
@@ -14,7 +14,6 @@ import com.glaze.autumn.clscanner.service.ClassScannerService;
 import com.glaze.autumn.clscanner.service.SimpClassScannerService;
 import com.glaze.autumn.shared.constant.FileConstants;
 import com.glaze.autumn.clslocator.enums.EnvironmentType;
-import com.glaze.autumn.shared.exception.AutumnApplicationException;
 import com.glaze.autumn.test.One;
 
 import java.util.*;
@@ -38,12 +37,11 @@ public class AutumnApplication implements CommandLineRunner{
     public static void run(Class<?> startUpClass){
         Environment environment = resolveEnvironmentForClass(startUpClass);
         ClassLocatorService locatorService = resolveClassLocatorServiceForType(environment.getType());
-
         Set<Class<?>> loadedClasses = locatorService.findAllProjectClasses(environment);
-        ClassScannerService scannerService = new SimpClassScannerService(loadedClasses);
 
-        Set<ClassModel> suitableClasses =  scannerService.findSuitableClasses();
-        scanCircularDependencies(suitableClasses);
+        ClassScannerService scannerService = new SimpClassScannerService(loadedClasses);
+        Set<ClassModel> suitableClasses =  scannerService.scan();
+        scanCircularDependencies(suitableClasses, startUpClass);
 
         ClassInstantiationService instantiationService = new SimpClassInstantiationService(suitableClasses);
         instantiationService.instantiateComponents();
@@ -68,7 +66,10 @@ public class AutumnApplication implements CommandLineRunner{
                 : new JarFileClassLocatorService();
     }
 
-    private static void scanCircularDependencies(Set<ClassModel> suitableClasses){
+    private static void scanCircularDependencies(
+            Set<ClassModel> suitableClasses,
+            Class<?> startUpClass
+    ){
         List<CircularDependencyModel> models = suitableClasses.stream()
                 .map(CircularDependencyModel::new)
                 .sorted(Comparator.comparing(model -> model.getAllRequiredDependencies().length))
@@ -79,13 +80,15 @@ public class AutumnApplication implements CommandLineRunner{
             circularModels.put(model.getType(), model);
         }
 
-        var circularDependencyDetectionService = new SimpCircularDependencyDetectionService(circularModels);
+        var circularDependencyDetectionService = new SimpCircularDependencyDetectionService(circularModels, startUpClass);
         circularDependencyDetectionService.scan();
     }
 
     private static void runApplication(Class<?> startUpClass){
         SimpClassScannerService scannerService = new SimpClassScannerService();
         ClassModel model = scannerService.scanMainClasses(startUpClass);
+
+
     }
 
 }
