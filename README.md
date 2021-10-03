@@ -14,5 +14,29 @@ at execution time to create new libraries.
 * Field based injection
 * @Qualifer field bean injection  
 * Constructor based injection
+* @Qualiger constructor based injection (Work in progress) 
 * Bean method instantiation
 * Circular dependency injection detection
+
+### Building the project
+This library is not intended to be used in production this is only a 
+hobbyist project, with that said, run:
+```
+./gradlew build publishToMavenLocal
+```
+With this command you've already built the project and published it to a
+maven local repository.
+
+### Usage
+If you're using Maven this one will recognize by default all local 
+libraries if any, but if you're running it with gradle you'll need to add
+mavenLocal to the repository section on `build.gradle`
+```
+repositories {
+   mavenLocal() // <- add this
+   other repositories...
+}
+```
+As the description says, this project is based on Spring boot's DI
+container, therefore it's usage it' just same, on this repository you will
+find a example project you can make use of for testing porpuses

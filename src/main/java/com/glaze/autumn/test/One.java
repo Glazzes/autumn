@@ -6,7 +6,7 @@ import com.glaze.autumn.annotations.Qualifier;
 import com.glaze.autumn.annotations.Service;
 
 @Service
-public class One {
+public class One implements Inter{
 
     @Qualifier(id = "otherId")
     @Autowired

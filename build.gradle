@@ -1,11 +1,37 @@
 plugins {
-    id 'java'
-    //id 'java-library'
-    //id 'maven-publish'
+    id 'java-library'
+    id 'maven-publish'
 }
 
 group 'glaze-autumn'
 version '1.0'
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = 'com.glaze.autumn'
+            artifactId = 'glaze-autumn'
+            version = '1.0'
+
+            from components.java
+        }
+
+        mavenJava(MavenPublication){
+            pom {
+                name = 'Autumn DI container'
+                description = "A dependency injection container based on spring boot's"
+                url = 'https://github.com/Glazzes/autumn'
+
+                developers{
+                    developer{
+                        id = 'Glaze'
+                        name = 'Santiago'
+                    }
+                }
+            }
+        }
+    }
+}
 
 jar {
     manifest {
@@ -17,11 +43,6 @@ jar {
 
 repositories {
     mavenCentral()
-}
-
-dependencies {
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.0'
 }
 
 test {

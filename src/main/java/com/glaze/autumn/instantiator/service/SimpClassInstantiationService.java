@@ -3,6 +3,7 @@ package com.glaze.autumn.instantiator.service;
 import com.glaze.autumn.annotations.*;
 import com.glaze.autumn.clscanner.model.ClassModel;
 import com.glaze.autumn.instantiator.exception.ComponentNotFoundException;
+import com.glaze.autumn.instantiator.exception.DuplicatedIdentifierException;
 import com.glaze.autumn.instantiator.model.InstantiationQueuedModel;
 
 import java.lang.reflect.Constructor;
@@ -23,6 +24,29 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
                 .collect(Collectors.toCollection(LinkedList::new));
     }
 
+    public InstantiationQueuedModel instantiateMainClass(InstantiationQueuedModel mainModel){
+        try{
+            this.resolveConstructorDependencies(mainModel);
+            if(mainModel.hasConstructorDependenciesResolved()){
+                this.attemptConstructorInstantiation(mainModel);
+            }
+
+            this.resolveAutowiredFieldsDependencies(mainModel);
+            if(mainModel.hasAutowiredFieldsResolved()){
+                this.assignAutowiredFieldDependencies(mainModel);
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+
+        if(!mainModel.isModelResolved()){
+            this.scanMissingAutowiredDependencies();
+            this.scanMissingConstructorDependencies();
+        }
+
+        return mainModel;
+    }
+
     @Override
     public void instantiateComponents() {
         int counter = 0;
@@ -37,19 +61,12 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
             scanMissingAutowiredDependencies();
             scanMissingConstructorDependencies();
         }
-
-        System.out.println(availableInstances);
     }
 
     private void attemptInstantiation(InstantiationQueuedModel model){
         try{
             this.resolveConstructorDependencies(model);
-            if(model.hasConstructorDependenciesResolved() && model.getInstance() == null) {
-                Constructor<?> classConstructor = model.getClassModel().getConstructor();
-                Object[] params = model.getConstructorDependencyInstances();
-                Object instance = classConstructor.newInstance(params);
-                model.setInstance(instance);
-            }
+            this.attemptConstructorInstantiation(model);
 
             this.resolveAutowiredFieldsDependencies(model);
             if(model.hasAutowiredFieldsResolved()){
@@ -58,6 +75,14 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
 
             if(model.isModelResolved()){
                 String classId = this.generateClassId(model.getClassModel());
+                if(availableInstances.containsKey(classId)){
+                    String errorMessage = String.format("""
+                    Can not instantiate %s because id "%s" is already use by another component
+                    """, model.getClassModel().getType(), classId);
+
+                    throw new DuplicatedIdentifierException(errorMessage);
+                }
+
                 this.availableInstances.put(classId, model.getInstance());
                 this.instantiateBeans(model.getBeans(), model.getInstance());
 
@@ -65,8 +90,17 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
             }else{
                 queuedModels.addLast(model);
             }
-        }catch (InstantiationException | IllegalAccessException | InvocationTargetException e){
+        }catch (Exception e){
             e.printStackTrace();
+        }
+    }
+
+    private void attemptConstructorInstantiation(InstantiationQueuedModel model) throws Exception{
+        if(model.hasConstructorDependenciesResolved() && model.getInstance() == null) {
+            Constructor<?> classConstructor = model.getClassModel().getConstructor();
+            Object[] params = model.getConstructorDependencyInstances();
+            Object instance = classConstructor.newInstance(params);
+            model.setInstance(instance);
         }
     }
 
@@ -107,16 +141,14 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
 
             if(currentField.isAnnotationPresent(Qualifier.class)){
                 Qualifier qualifier = currentField.getAnnotation(Qualifier.class);
-                String componentId = String.format(
-                        "%s-%s",
-                        currentField.getType().getTypeName(),
-                        qualifier.id()
-                );
-
+                String componentId = qualifier.id();
 
                 Object dependency = availableInstances.get(componentId);
                 if(dependency != null){
-                    model.getAutowiredFieldDependencyInstances()[i] = dependency;
+                    Class<?> dependencyType = dependency.getClass();
+                    if(fieldType.isAssignableFrom(dependencyType)){
+                        model.getAutowiredFieldDependencyInstances()[i] = dependency;
+                    }
                 }
 
                 continue;
@@ -159,21 +191,21 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         if(classType.isAnnotationPresent(Service.class)){
             Service serviceAnnotation = classType.getAnnotation(Service.class);
             if(!serviceAnnotation.id().isBlank()){
-                id = serviceAnnotation.id();
+                return serviceAnnotation.id();
             }
         }
 
         if(model.getType().isAnnotationPresent(Repository.class)){
             Repository repositoryAnnotation = classType.getAnnotation(Repository.class);
             if(!repositoryAnnotation.id().isBlank()){
-                id = repositoryAnnotation.id();
+                return repositoryAnnotation.id();
             }
         }
 
         if(classType.isAnnotationPresent(Component.class)){
             Component componentAnnotation = classType.getAnnotation(Component.class);
             if(!componentAnnotation.id().isBlank()){
-                id = componentAnnotation.id();
+                return componentAnnotation.id();
             }
         }
 
@@ -203,7 +235,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
 
         Bean beanAnnotation = bean.getAnnotation(Bean.class);
         if(!beanAnnotation.id().isBlank()){
-            id = beanAnnotation.id();
+            return beanAnnotation.id();
         }
 
         return String.format("%s-%s", beanType, id);
