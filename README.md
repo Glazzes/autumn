@@ -14,7 +14,7 @@ at execution time to create new libraries.
 * Field based injection
 * @Qualifer field bean injection  
 * Constructor based injection
-* @Qualiger constructor based injection (Work in progress) 
+* @Qualifer constructor based injection (Work in progress) 
 * Bean method instantiation
 * Circular dependency injection detection
 
@@ -30,7 +30,7 @@ maven local repository.
 ### Usage
 If you're using Maven this one will recognize by default all local 
 libraries if any, but if you're running it with gradle you'll need to add
-mavenLocal to the repository section on `build.gradle`
+mavenLocal() into repositories section in your `build.gradle`
 ```
 repositories {
    mavenLocal() // <- add this
