@@ -1,6 +1,6 @@
 package com.glaze.autumn.circulardependency.exception;
 
-import com.glaze.autumn.shared.constant.CDConstants;
+import com.glaze.autumn.constants.CDConstants;
 
 import java.util.ArrayList;
 import java.util.HashMap;

@@ -7,6 +7,8 @@ import com.glaze.autumn.clscanner.model.ClassModel;
 import com.glaze.autumn.annotations.Autowired;
 import com.glaze.autumn.annotations.Bean;
 import com.glaze.autumn.annotations.PostConstruct;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -18,6 +20,7 @@ import java.util.stream.Collectors;
 public class SimpClassScannerService implements ClassScannerService {
     private Set<Class<?>> locatedClasses;
     private AnnotationConfiguration annotationConfiguration;
+    private final Logger logger = LogManager.getLogger(ClassScannerService.class);
 
     public SimpClassScannerService(){}
 
@@ -28,15 +31,21 @@ public class SimpClassScannerService implements ClassScannerService {
 
     @Override
     public Set<ClassModel> scan() {
-        return this.locatedClasses.stream()
+        Set<ClassModel> model = this.locatedClasses.stream()
                 .filter(this::findClassFiles)
                 .filter(this::findComponentClasses)
                 .map(this::newClassModelInstance)
                 .collect(Collectors.toSet());
+
+        logger.debug("Project class's data loaded successfully");
+        return model;
     }
 
     public ClassModel scanMainClasses(Class<?> cls){
-        return this.newClassModelInstance(cls);
+        ClassModel model = this.newClassModelInstance(cls);
+        logger.debug("Main class data loaded successfully");
+
+        return model;
     }
 
     private ClassModel newClassModelInstance(Class<?> cls){

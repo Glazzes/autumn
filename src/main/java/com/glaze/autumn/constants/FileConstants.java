@@ -1,4 +1,4 @@
-package com.glaze.autumn.shared.constant;
+package com.glaze.autumn.constants;
 
 public class FileConstants {
     public final static String CLASS_EXTENSION = ".class";

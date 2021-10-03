@@ -10,18 +10,21 @@ import com.glaze.autumn.clslocator.model.Environment;
 import com.glaze.autumn.instantiator.model.InstantiationQueuedModel;
 import com.glaze.autumn.instantiator.service.SimpClassInstantiationService;
 import com.glaze.autumn.clscanner.service.SimpClassScannerService;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
-@com.glaze.autumn.annotations.AutumnApplication
-public class AutumnApplication{
+public class Autumn {
+    private static final Logger logger = LogManager.getLogger(Autumn.class);
 
     public static void main(String[] args) {
-        run(AutumnApplication.class);
+        run(Autumn.class);
     }
 
     public static void run(Class<?> startUpClass){
-        Environment environment = resolveInvironment(startUpClass);
+        logger.debug("Starting Application");
+        Environment environment = resolveEnvironment(startUpClass);
         Set<Class<?>> loadedClasses = loadClasses(environment);
 
         var scannerService = new SimpClassScannerService(loadedClasses);

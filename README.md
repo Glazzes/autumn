@@ -20,7 +20,7 @@ at execution time to create new libraries.
 
 ### Building the project
 This library is not intended to be used in production this is only a 
-hobbyist project, with that said, run:
+hobbyist project, with that said, run the following command:
 ```
 ./gradlew build publishToMavenLocal
 ```
@@ -38,5 +38,20 @@ repositories {
 }
 ```
 As the description says, this project is based on Spring boot's DI
-container, therefore it's usage it' just same, on this repository you will
-find a example project you can make use of for testing porpuses
+container, therefore it's usage is very similar, you can find an autumn example
+by [clicking here](https://github.com/Glazzes/autumnexample).
+
+### Artifacts
+Maven
+```
+<dependency>
+    <groupId>com.glaze.autumn</groupId>
+    <artifactId>glaze-autumn</artifactId>
+    <version>1.1</version>
+</dependency>
+```
+
+Gradle
+```
+implementation 'com.glaze.autumn:glaze-autumn:1.1'
+```

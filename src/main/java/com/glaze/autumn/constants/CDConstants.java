@@ -1,4 +1,4 @@
-package com.glaze.autumn.shared.constant;
+package com.glaze.autumn.constants;
 
 public class CDConstants {
     public static final String PRECD = "preCD";

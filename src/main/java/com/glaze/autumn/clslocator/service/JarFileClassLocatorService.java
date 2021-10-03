@@ -1,7 +1,7 @@
 package com.glaze.autumn.clslocator.service;
 
 import com.glaze.autumn.clslocator.model.Environment;
-import com.glaze.autumn.shared.constant.FileConstants;
+import com.glaze.autumn.constants.FileConstants;
 
 import java.io.File;
 import java.io.IOException;

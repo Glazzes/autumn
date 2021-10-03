@@ -5,6 +5,8 @@ import com.glaze.autumn.clscanner.model.ClassModel;
 import com.glaze.autumn.instantiator.exception.ComponentNotFoundException;
 import com.glaze.autumn.instantiator.exception.DuplicatedIdentifierException;
 import com.glaze.autumn.instantiator.model.InstantiationQueuedModel;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -16,6 +18,7 @@ import java.util.stream.Collectors;
 public class SimpClassInstantiationService implements ClassInstantiationService, MissingDependencyScanner {
     private final LinkedList<InstantiationQueuedModel> queuedModels;
     private final Map<String, Object> availableInstances = new HashMap<>();
+    private final Logger logger = LogManager.getLogger(SimpClassInstantiationService.class);
 
     public SimpClassInstantiationService(Set<ClassModel> clsModels){
         this.queuedModels = clsModels.stream()
@@ -25,6 +28,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
     }
 
     public InstantiationQueuedModel instantiateMainClass(InstantiationQueuedModel mainModel){
+        logger.debug("Instantiating " + mainModel.getClassModel().getType() + " class");
         try{
             this.resolveConstructorDependencies(mainModel);
             if(mainModel.hasConstructorDependenciesResolved()){
@@ -44,11 +48,13 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
             this.scanMissingConstructorDependencies();
         }
 
+        logger.debug("Main class has been instantiated correctly");
         return mainModel;
     }
 
     @Override
     public void instantiateComponents() {
+        logger.debug("Instantiating classes");
         int counter = 0;
         while (!queuedModels.isEmpty()){
             if(counter > 1000) break;
@@ -61,6 +67,8 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
             scanMissingAutowiredDependencies();
             scanMissingConstructorDependencies();
         }
+
+        logger.debug("Project classes have been instantiated correctly");
     }
 
     private void attemptInstantiation(InstantiationQueuedModel model){

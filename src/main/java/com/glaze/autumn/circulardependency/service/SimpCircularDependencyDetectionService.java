@@ -3,7 +3,7 @@ package com.glaze.autumn.circulardependency.service;
 import com.glaze.autumn.circulardependency.exception.CircularDependencyInjectionException;
 import com.glaze.autumn.circulardependency.exception.ExceptionMessageFormatter;
 import com.glaze.autumn.circulardependency.model.CircularDependencyModel;
-import com.glaze.autumn.shared.exception.AutumnApplicationException;
+import com.glaze.autumn.application.exception.AutumnApplicationException;
 
 import java.util.*;
 
