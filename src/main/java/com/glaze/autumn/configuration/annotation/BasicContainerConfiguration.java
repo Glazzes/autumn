@@ -15,6 +15,7 @@ public class BasicContainerConfiguration implements AnnotationConfiguration {
         componentAnnotations.add(Component.class);
         componentAnnotations.add(Service.class);
         componentAnnotations.add(Repository.class);
+        componentAnnotations.add(Configuration.class);
         beanAnnotations.add(Bean.class);
     }
 

@@ -15,7 +15,8 @@ import org.apache.logging.log4j.Logger;
 
 import java.util.*;
 
-public class Autumn {
+public class Autumn{
+
     private static final Logger logger = LogManager.getLogger(Autumn.class);
 
     public static void main(String[] args) {

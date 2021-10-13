@@ -8,6 +8,7 @@ import com.glaze.autumn.instantiator.model.InstantiationQueuedModel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -16,7 +17,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class SimpClassInstantiationService implements ClassInstantiationService, MissingDependencyScanner {
-    private final LinkedList<InstantiationQueuedModel> queuedModels;
+    private final Queue<InstantiationQueuedModel> queuedModels;
     private final Map<String, Object> availableInstances = new HashMap<>();
     private final Logger logger = LogManager.getLogger(SimpClassInstantiationService.class);
 
@@ -24,7 +25,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         this.queuedModels = clsModels.stream()
                 .sorted(Comparator.comparing(model -> model.getConstructor().getParameterCount()))
                 .map(InstantiationQueuedModel::new)
-                .collect(Collectors.toCollection(LinkedList::new));
+                .collect(Collectors.toCollection(ArrayDeque::new));
     }
 
     public InstantiationQueuedModel instantiateMainClass(InstantiationQueuedModel mainModel){
@@ -44,8 +45,8 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         }
 
         if(!mainModel.isModelResolved()){
-            this.scanMissingAutowiredDependencies();
-            this.scanMissingConstructorDependencies();
+            mainModel.onUnresolvedAutowiredFieldDependencies();
+            mainModel.onUnresolvedConstructorDependencies();
         }
 
         logger.debug("Main class has been instantiated correctly");
@@ -58,7 +59,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         int counter = 0;
         while (!queuedModels.isEmpty()){
             if(counter > 1000) break;
-            InstantiationQueuedModel queuedModel = queuedModels.removeFirst();
+            InstantiationQueuedModel queuedModel = queuedModels.poll();
             attemptInstantiation(queuedModel);
             counter++;
         }
@@ -96,7 +97,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
 
                 this.invokePostConstructMethod(model);
             }else{
-                queuedModels.addLast(model);
+                queuedModels.add(model);
             }
         }catch (Exception e){
             e.printStackTrace();
@@ -115,11 +116,33 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
     public void resolveConstructorDependencies(InstantiationQueuedModel model){
         for(int i = 0; i < model.getConstructorDependencies().length; i++){
             Class<?> dependencyType = model.getConstructorDependencies()[i];
+            Object instance = model.getConstructorDependencyInstances()[i];
+            Annotation[] dependencyAnnotations = model.getParameterAnnotations()[i];
+
+            if(dependencyAnnotations != null){
+                Qualifier qualifier = null;
+                if(dependencyAnnotations.length > 0){
+                    for(Annotation ann : dependencyAnnotations){
+                        if(Qualifier.class.isAssignableFrom(ann.getClass())){
+                            qualifier = (Qualifier) ann;
+                            break;
+                        }
+                    }
+                }
+
+                if(qualifier != null && instance == null){
+                    Object availableInstance = availableInstances.get(qualifier.id());
+                    if(availableInstance != null){
+                        model.getConstructorDependencyInstances()[i] = availableInstance;
+                    }
+                }
+
+                continue;
+            }
+
             for (Object dependency : availableInstances.values()) {
-                if(dependency.getClass().isAssignableFrom(dependencyType)
-                        && model.getConstructorDependencyInstances()[i] == null
-                ){
-                    model.getConstructorDependencyInstances()[i] = dependency;
+                if(dependency.getClass().isAssignableFrom(dependencyType) && instance == null){
+                    instance = dependency;
                 }
             }
         }
@@ -286,7 +309,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         for(InstantiationQueuedModel model : queuedModels){
             Class<?>[] constructorDependencies = model.getConstructorDependencies();
             for(int dep = 0; dep < constructorDependencies.length; dep++){
-                Object dependency = model.getAutowiredFieldDependencyInstances()[dep];
+                Object dependency = model.getConstructorDependencyInstances()[dep];
                 if(dependency == null){
                     String errorMessage = String.format(
                     "%s's required a bean of type %s that could not be found, consider declaring one.",

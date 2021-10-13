@@ -11,7 +11,6 @@ public class ClassModel {
     private Constructor<?> constructor;
     private Method postConstruct;
     private Method[] beans;
-    private boolean isStartUpClass;
 
     public Class<?> getType() {
         return type;
@@ -51,14 +50,6 @@ public class ClassModel {
 
     public void setBeans(Method[] beans) {
         this.beans = beans;
-    }
-
-    public boolean isStartUpClass() {
-        return isStartUpClass;
-    }
-
-    public void setIsStartUpClass(boolean startUpClass) {
-        isStartUpClass = startUpClass;
     }
 
     @Override

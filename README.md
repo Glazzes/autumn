@@ -1,7 +1,7 @@
 ## Autumn DI container
 
 ### About this project
-Spring boot is by far the most used Java web framework today and
+Spring boot is by far the most used Java frameworks today and
 something that caught my eye was the dependency injection
 container and how it "magically" injects the right instances 
 into your classes.
@@ -12,9 +12,9 @@ at execution time to create new libraries.
 
 ### Features
 * Field based injection
-* @Qualifer field bean injection  
 * Constructor based injection
-* @Qualifer constructor based injection (Work in progress) 
+* @Qualifer field bean injection
+* @Qualifer constructor based injection
 * Bean method instantiation
 * Circular dependency injection detection
 
@@ -39,9 +39,9 @@ repositories {
 ```
 As the description says, this project is based on Spring boot's DI
 container, therefore it's usage is very similar, you can find an autumn example
-by [clicking here](https://github.com/Glazzes/autumnexample).
+in [thi repository](https://github.com/Glazzes/autumnexample).
+Remember to add the respective artifacts for your favorite build tool.
 
-### Artifacts
 Maven
 ```
 <dependency>

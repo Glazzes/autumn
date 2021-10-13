@@ -4,6 +4,7 @@ import com.glaze.autumn.annotations.Qualifier;
 import com.glaze.autumn.clscanner.model.ClassModel;
 import com.glaze.autumn.instantiator.exception.ComponentNotFoundException;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -11,6 +12,7 @@ import java.util.Objects;
 
 public class InstantiationQueuedModel {
     private final ClassModel classModel;
+    private final Annotation[][] parameterAnnotations;
     private final Class<?>[] constructorDependencies;
     private final Object[] constructorDependencyInstances;
     private final Field[] autowiredFields;
@@ -24,6 +26,7 @@ public class InstantiationQueuedModel {
                 : clsModel.getAutowiredFields().length;
 
         this.classModel = clsModel;
+        this.parameterAnnotations = clsModel.getConstructor().getParameterAnnotations();
         this.constructorDependencies = clsModel.getConstructor().getParameterTypes();
         this.constructorDependencyInstances = new Object[this.constructorDependencies.length];
         this.autowiredFields = clsModel.getAutowiredFields();
@@ -67,7 +70,35 @@ public class InstantiationQueuedModel {
 
     public void onUnresolvedConstructorDependencies(){
         for(int dep = 0; dep < constructorDependencies.length; dep++){
-            if(constructorDependencyInstances[dep] == null){
+            Class<?> dependencyType = constructorDependencies[dep];
+            Object instance = constructorDependencyInstances[dep];
+            Annotation[] dependencyAnnotations = parameterAnnotations[dep];
+
+            if(dependencyAnnotations != null && dependencyAnnotations.length > 0){
+                Qualifier qualifier = null;
+                for(Annotation ann : dependencyAnnotations){
+                    if(Qualifier.class.isAssignableFrom(ann.getClass())){
+                        qualifier = (Qualifier) ann;
+                        break;
+                    }
+                }
+
+                if(qualifier != null && instance == null){
+                    String errorMessage = String.format(
+                            """
+                            Constructor of %s required a bean of type %s with id "%s" that could not be found, consider
+                            declaring one.
+                            """,
+                            classModel.getType(),
+                            dependencyType,
+                            qualifier.id()
+                    );
+
+                    throw new ComponentNotFoundException(errorMessage);
+                }
+            }
+
+            if(instance == null){
                 Class<?> type = classModel.getType();
                 String errorMessage = String.format("""
                 Constructor of %s required a bean of type %s that could not be found or instantiated properly
@@ -80,6 +111,10 @@ public class InstantiationQueuedModel {
 
     public ClassModel getClassModel() {
         return classModel;
+    }
+
+    public Annotation[][] getParameterAnnotations() {
+        return parameterAnnotations;
     }
 
     public Class<?>[] getConstructorDependencies() {

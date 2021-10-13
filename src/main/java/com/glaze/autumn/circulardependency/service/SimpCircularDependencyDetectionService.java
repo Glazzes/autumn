@@ -27,12 +27,12 @@ public class SimpCircularDependencyDetectionService implements CircularDependenc
                     .getClassModel()
                     .getType();
 
-            LinkedList<Class<?>> nodes = new LinkedList<>();
+            Stack<Class<?>> nodes = new Stack<>();
             this.scanCircularDependenciesRecursively(rootClass, null, nodes);
         }
     }
 
-    private void scanCircularDependenciesRecursively(final Class<?> rootClass, Class<?> currentClass, LinkedList<Class<?>> nodes){
+    private void scanCircularDependenciesRecursively(final Class<?> rootClass, Class<?> currentClass, Stack<Class<?>> nodes){
         if(nodes.contains(startUpClass)){
             this.onStartUpClassCircularDependency(nodes.get(nodes.size()-1));
         }
@@ -53,20 +53,20 @@ public class SimpCircularDependencyDetectionService implements CircularDependenc
         }
 
         Class<?>[] currentClassDependencies = currentClass == null
-                ? this.getClassDependencies(rootClass)
-                : this.getClassDependencies(currentClass);
+                ? circularDependencyModels.get(rootClass).getAllRequiredDependencies()
+                : circularDependencyModels.get(currentClass).getAllRequiredDependencies();
 
         for(Class<?> dependency : currentClassDependencies){
-            nodes.addLast(dependency);
+            nodes.push(dependency);
             this.scanCircularDependenciesRecursively(rootClass, dependency, nodes);
         }
 
-        if(nodes.size() > 0) nodes.removeLast();
+        if(nodes.size() > 0) nodes.pop();
     }
 
     private void onStartUpClassCircularDependency(Class<?> causedBy){
         String errorMessage = String.format("""
-        %s required a bean of the startup class that will no be satisfied, consider refectoring
+        %s required a bean of the startup class that will no be satisfied, consider refactoring
         """, causedBy);
 
         throw new AutumnApplicationException(errorMessage);
@@ -89,21 +89,6 @@ public class SimpCircularDependencyDetectionService implements CircularDependenc
         );
 
         throw new CircularDependencyInjectionException(errorMessage);
-    }
-
-    private Class<?>[] getClassDependencies(Class<?> cls){
-        return Optional.of(circularDependencyModels.get(cls))
-                .map(model -> model.getClassModel()
-                        .getConstructor()
-                        .getParameterTypes()
-                )
-                .orElseThrow(() -> {
-                    String errorMessage = String.format("""
-                    A bean of type %s was required but none were present
-                    """, cls.getName());
-
-                    return new IllegalArgumentException(errorMessage);
-                });
     }
 
 }
