@@ -54,7 +54,9 @@ public class SimpCircularDependencyDetectionService implements CircularDependenc
 
         Class<?>[] currentClassDependencies = currentClass == null
                 ? circularDependencyModels.get(rootClass).getAllRequiredDependencies()
-                : circularDependencyModels.get(currentClass).getAllRequiredDependencies();
+                : circularDependencyModels.containsKey(currentClass)
+                ? circularDependencyModels.get(currentClass).getAllRequiredDependencies()
+                : new Class<?>[0];
 
         for(Class<?> dependency : currentClassDependencies){
             nodes.push(dependency);
