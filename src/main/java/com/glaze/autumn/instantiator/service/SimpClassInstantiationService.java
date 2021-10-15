@@ -44,8 +44,6 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
             e.printStackTrace();
         }
 
-        System.out.println(mainModel);
-        System.out.println(Arrays.toString(mainModel.getConstructorDependencyInstances()));
         if(!mainModel.isModelResolved()){
             mainModel.onUnresolvedAutowiredFieldDependencies();
             mainModel.onUnresolvedConstructorDependencies();
@@ -113,7 +111,6 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
             Annotation[] dependencyAnnotations = model.getConstructorParameterAnnotations()[i];
 
             if(dependencyAnnotations != null && dependencyAnnotations.length > 0){
-                System.out.println("sos");
                 Qualifier qualifier = null;
                 for(Annotation ann : dependencyAnnotations){
                     if(Qualifier.class.isAssignableFrom(ann.getClass())){
