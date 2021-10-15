@@ -22,16 +22,17 @@ public class DirectoryClassLocatorService implements ClassLocatorService {
     private Set<String> findAllClassNames(String path){
         Path currentPath = Paths.get(path);
         try{
-            return Files.walk(currentPath)
+             return Files.walk(currentPath)
                  .filter(p -> !Files.isDirectory(p))
+                 .filter(p -> p.toString().endsWith(FileConstants.CLASS_EXTENSION))
                  .map(p -> p.toString()
                             .replace(path, "")
-                            .replaceAll("\\\\", ".")
-                            .replaceAll("/", ".")
+                            .replaceAll("[\\\\/]", ".")
                             .replace(FileConstants.CLASS_EXTENSION, "")
                  )
                  .collect(Collectors.toSet());
         }catch (IOException e){
+           e.printStackTrace();
            return null;
         }
     }

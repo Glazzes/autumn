@@ -12,8 +12,8 @@ import java.util.Objects;
 
 public class InstantiationQueuedModel {
     private final ClassModel classModel;
-    private final Annotation[][] parameterAnnotations;
-    private final Class<?>[] constructorDependencies;
+    private final Annotation[][] constructorParameterAnnotations;
+    private final Class<?>[] constructorParameterTypes;
     private final Object[] constructorDependencyInstances;
     private final Field[] autowiredFields;
     private final Object[] autowiredFieldDependencyInstances;
@@ -21,16 +21,12 @@ public class InstantiationQueuedModel {
     private Object instance;
 
     public InstantiationQueuedModel(ClassModel clsModel){
-        int numberOfAutowiredFields = clsModel.getAutowiredFields() == null
-                ? 0
-                : clsModel.getAutowiredFields().length;
-
         this.classModel = clsModel;
-        this.parameterAnnotations = clsModel.getConstructor().getParameterAnnotations();
-        this.constructorDependencies = clsModel.getConstructor().getParameterTypes();
-        this.constructorDependencyInstances = new Object[this.constructorDependencies.length];
+        this.constructorParameterAnnotations = clsModel.getConstructor().getParameterAnnotations();
+        this.constructorParameterTypes = clsModel.getConstructor().getParameterTypes();
+        this.constructorDependencyInstances = new Object[this.constructorParameterTypes.length];
         this.autowiredFields = clsModel.getAutowiredFields();
-        this.autowiredFieldDependencyInstances = new Object[numberOfAutowiredFields];
+        this.autowiredFieldDependencyInstances = new Object[autowiredFields == null ? 0 : autowiredFields.length];
         this.beans = classModel.getBeans();
     }
 
@@ -69,10 +65,10 @@ public class InstantiationQueuedModel {
     }
 
     public void onUnresolvedConstructorDependencies(){
-        for(int dep = 0; dep < constructorDependencies.length; dep++){
-            Class<?> dependencyType = constructorDependencies[dep];
+        for(int dep = 0; dep < constructorParameterTypes.length; dep++){
+            Class<?> dependencyType = constructorParameterTypes[dep];
             Object instance = constructorDependencyInstances[dep];
-            Annotation[] dependencyAnnotations = parameterAnnotations[dep];
+            Annotation[] dependencyAnnotations = constructorParameterAnnotations[dep];
 
             if(dependencyAnnotations != null && dependencyAnnotations.length > 0){
                 Qualifier qualifier = null;
@@ -102,7 +98,7 @@ public class InstantiationQueuedModel {
                 Class<?> type = classModel.getType();
                 String errorMessage = String.format("""
                 Constructor of %s required a bean of type %s that could not be found or instantiated properly
-                """, type, constructorDependencies[dep]);
+                """, type, constructorParameterTypes[dep]);
 
                 throw new ComponentNotFoundException(errorMessage);
             }
@@ -113,12 +109,12 @@ public class InstantiationQueuedModel {
         return classModel;
     }
 
-    public Annotation[][] getParameterAnnotations() {
-        return parameterAnnotations;
+    public Annotation[][] getConstructorParameterAnnotations() {
+        return constructorParameterAnnotations;
     }
 
-    public Class<?>[] getConstructorDependencies() {
-        return constructorDependencies;
+    public Class<?>[] getConstructorParameterTypes() {
+        return constructorParameterTypes;
     }
 
     public Object[] getConstructorDependencyInstances() {

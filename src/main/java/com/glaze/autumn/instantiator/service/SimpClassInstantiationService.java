@@ -44,6 +44,8 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
             e.printStackTrace();
         }
 
+        System.out.println(mainModel);
+        System.out.println(Arrays.toString(mainModel.getConstructorDependencyInstances()));
         if(!mainModel.isModelResolved()){
             mainModel.onUnresolvedAutowiredFieldDependencies();
             mainModel.onUnresolvedConstructorDependencies();
@@ -104,29 +106,19 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         }
     }
 
-    private void attemptConstructorInstantiation(InstantiationQueuedModel model) throws Exception{
-        if(model.hasConstructorDependenciesResolved() && model.getInstance() == null) {
-            Constructor<?> classConstructor = model.getClassModel().getConstructor();
-            Object[] params = model.getConstructorDependencyInstances();
-            Object instance = classConstructor.newInstance(params);
-            model.setInstance(instance);
-        }
-    }
-
     public void resolveConstructorDependencies(InstantiationQueuedModel model){
-        for(int i = 0; i < model.getConstructorDependencies().length; i++){
-            Class<?> dependencyType = model.getConstructorDependencies()[i];
+        for(int i = 0; i < model.getConstructorParameterTypes().length; i++){
+            Class<?> dependencyType = model.getConstructorParameterTypes()[i];
             Object instance = model.getConstructorDependencyInstances()[i];
-            Annotation[] dependencyAnnotations = model.getParameterAnnotations()[i];
+            Annotation[] dependencyAnnotations = model.getConstructorParameterAnnotations()[i];
 
-            if(dependencyAnnotations != null){
+            if(dependencyAnnotations != null && dependencyAnnotations.length > 0){
+                System.out.println("sos");
                 Qualifier qualifier = null;
-                if(dependencyAnnotations.length > 0){
-                    for(Annotation ann : dependencyAnnotations){
-                        if(Qualifier.class.isAssignableFrom(ann.getClass())){
-                            qualifier = (Qualifier) ann;
-                            break;
-                        }
+                for(Annotation ann : dependencyAnnotations){
+                    if(Qualifier.class.isAssignableFrom(ann.getClass())){
+                        qualifier = (Qualifier) ann;
+                        break;
                     }
                 }
 
@@ -135,16 +127,31 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
                     if(availableInstance != null){
                         model.getConstructorDependencyInstances()[i] = availableInstance;
                     }
-                }
 
-                continue;
+                    continue;
+                }
             }
 
             for (Object dependency : availableInstances.values()) {
-                if(dependency.getClass().isAssignableFrom(dependencyType) && instance == null){
-                    instance = dependency;
+                if(dependencyType.isAssignableFrom(dependency.getClass()) && instance == null){
+                    model.getConstructorDependencyInstances()[i] = dependency;
                 }
             }
+        }
+    }
+
+    private void attemptConstructorInstantiation(InstantiationQueuedModel model) throws Exception{
+        if(model.hasConstructorDependenciesResolved() && model.getInstance() == null) {
+            Constructor<?> classConstructor = model.getClassModel().getConstructor();
+            Object[] params = model.getConstructorDependencyInstances();
+            if(params.length == 0){
+                Object instance = classConstructor.newInstance();
+                model.setInstance(instance);
+                return;
+            }
+
+            Object instance = classConstructor.newInstance(params);
+            model.setInstance(instance);
         }
     }
 
@@ -307,14 +314,14 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
     @Override
     public void scanMissingConstructorDependencies() {
         for(InstantiationQueuedModel model : queuedModels){
-            Class<?>[] constructorDependencies = model.getConstructorDependencies();
+            Class<?>[] constructorDependencies = model.getConstructorParameterTypes();
             for(int dep = 0; dep < constructorDependencies.length; dep++){
                 Object dependency = model.getConstructorDependencyInstances()[dep];
                 if(dependency == null){
                     String errorMessage = String.format(
                     "%s's required a bean of type %s that could not be found, consider declaring one.",
                            model.getClassModel().getType(),
-                           model.getConstructorDependencies()[dep]
+                           model.getConstructorParameterTypes()[dep]
                     );
 
                     throw new ComponentNotFoundException(errorMessage);

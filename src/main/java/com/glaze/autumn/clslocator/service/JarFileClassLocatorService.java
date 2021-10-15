@@ -22,20 +22,18 @@ public class JarFileClassLocatorService implements ClassLocatorService {
 
             while (entries.hasMoreElements()){
                 JarEntry entry = entries.nextElement();
-                if(entry.isDirectory() || !entry.getName().endsWith(FileConstants.CLASS_EXTENSION)) continue;
+                if(!entry.isDirectory() && entry.getName().endsWith(FileConstants.CLASS_EXTENSION)){
+                    try{
+                        String clsName = entry.getName()
+                                .replaceAll("[\\\\/]", ".")
+                                .replace(FileConstants.CLASS_EXTENSION, "");
 
-                try{
-                    String clsName = entry.getName()
-                            .replaceAll("\\\\", ".")
-                            .replaceAll("/", ".")
-                            .replace(FileConstants.CLASS_EXTENSION, "");
-
-                    Class<?> cls = Class.forName(clsName);
-                    suitableClasses.add(cls);
-                }catch (ClassNotFoundException e){
-                    e.printStackTrace();
+                        Class<?> cls = Class.forName(clsName);
+                        suitableClasses.add(cls);
+                    }catch (ClassNotFoundException e){
+                        e.printStackTrace();
+                    }
                 }
-
             }
 
         }catch (IOException e){

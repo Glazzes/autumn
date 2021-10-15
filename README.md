@@ -17,6 +17,7 @@ at execution time to create new libraries.
 * @Qualifer constructor based injection
 * Bean method instantiation
 * Circular dependency injection detection
+* Bean based circular dependency check (TODO)
 
 ### Building the project
 This library is not intended to be used in production this is only a 
@@ -30,7 +31,7 @@ maven local repository.
 ### Usage
 If you're using Maven this one will recognize by default all local 
 libraries if any, but if you're running it with gradle you'll need to add
-mavenLocal() into repositories section in your `build.gradle`
+mavenLocal() into repositories declaration of your `build.gradle` file.
 ```
 repositories {
    mavenLocal() // <- add this
@@ -39,7 +40,9 @@ repositories {
 ```
 As the description says, this project is based on Spring boot's DI
 container, therefore it's usage is very similar, you can find an autumn example
-in [thi repository](https://github.com/Glazzes/autumnexample).
+in [this repository](https://github.com/Glazzes/autumnexample) both for Java and
+Kotlin.
+
 Remember to add the respective artifacts for your favorite build tool.
 
 Maven
@@ -54,4 +57,9 @@ Maven
 Gradle
 ```
 implementation 'com.glaze.autumn:glaze-autumn:1.1'
+```
+
+Gradle kts
+```
+implementation("com.glaze.autumn:glaze-autumn:1.1")
 ```
