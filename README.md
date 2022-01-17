@@ -1,7 +1,7 @@
 ## Autumn DI container
 
 ### About this project
-Spring boot is by far the most used Java frameworks today and
+Spring boot is by far the most used Java framework today and
 something that caught my eye was the dependency injection
 container and how it "magically" injects the right instances 
 into your classes.

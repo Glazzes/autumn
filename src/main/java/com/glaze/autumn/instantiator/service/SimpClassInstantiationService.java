@@ -218,10 +218,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
 
     private String generateClassId(ClassModel model){
         Class<?> classType = model.getType();
-        String component = model.getType().getTypeName();
-        String id = UUID.randomUUID().toString()
-                .replaceAll("-", "")
-                .substring(0, 10);
+        String componentName = model.getType().getTypeName();
 
         if(classType.isAnnotationPresent(Service.class)){
             Service serviceAnnotation = classType.getAnnotation(Service.class);
@@ -244,7 +241,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
             }
         }
 
-        return String.format("%s-%s", component, id);
+        return componentName;
     }
 
     @Override
@@ -252,28 +249,20 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         if(beans == null) return;
 
         try{
-            for (Method bean : beans) {
-                Object beanInstance = bean.invoke(instance);
-                String beanId = generateBeanId(bean);
+            for (Method method : beans) {
+                Object beanInstance = method.invoke(instance);
+                String beanId = method.getName();
+
+                boolean exists = availableInstances.containsKey(beanId);
+                if(exists){
+                    throw new DuplicatedIdentifierException("There's already a bean with id " + beanId);
+                }
+
                 this.availableInstances.put(beanId, beanInstance);
             }
         }catch (IllegalAccessException | InvocationTargetException e){
             e.printStackTrace();
         }
-    }
-
-    private String generateBeanId(Method bean){
-        String beanType = bean.getReturnType().getTypeName();
-        String id = UUID.randomUUID().toString()
-                .replace("-", "")
-                .substring(0, 10);
-
-        Bean beanAnnotation = bean.getAnnotation(Bean.class);
-        if(!beanAnnotation.id().isBlank()){
-            return beanAnnotation.id();
-        }
-
-        return String.format("%s-%s", beanType, id);
     }
 
     @Override
