@@ -85,9 +85,7 @@ public class SimpClassScannerService implements ClassScannerService {
             autowiredFields.add(field);
         }
 
-        return autowiredFields.size() > 0
-               ? autowiredFields.toArray(Field[]::new)
-               : null;
+        return autowiredFields.toArray(Field[]::new);
     }
 
     private Constructor<?> getSuitableConstructor(Class<?> cls){
@@ -143,7 +141,7 @@ public class SimpClassScannerService implements ClassScannerService {
             }
         }
 
-        return beans.size() > 0 ? beans.toArray(Method[]::new) : null;
+        return beans.toArray(Method[]::new);
     }
 
 }

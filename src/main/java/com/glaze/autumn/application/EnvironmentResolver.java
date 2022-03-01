@@ -2,7 +2,7 @@ package com.glaze.autumn.application;
 
 import com.glaze.autumn.clslocator.enums.EnvironmentType;
 import com.glaze.autumn.clslocator.model.Environment;
-import com.glaze.autumn.constants.FileConstants;
+import com.glaze.autumn.clslocator.constants.FileConstants;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

@@ -1,4 +1,4 @@
-package com.glaze.autumn.constants;
+package com.glaze.autumn.clslocator.constants;
 
 public class FileConstants {
     public final static String CLASS_EXTENSION = ".class";

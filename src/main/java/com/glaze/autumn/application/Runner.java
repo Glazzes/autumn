@@ -14,7 +14,7 @@ public interface Runner {
         Class<?> mainModelType = mainModel.getClassModel().getType();
         Object instance = mainModel.getInstance();
 
-        logger.debug("Application started");
+        logger.debug("Application started \uD83C\uDF1F");
         if(CommandLineRunner.class.isAssignableFrom(mainModelType)){
            try{
                Method runMethod = mainModelType.getMethod("run");
