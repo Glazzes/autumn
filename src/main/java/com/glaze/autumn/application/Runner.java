@@ -1,6 +1,6 @@
 package com.glaze.autumn.application;
 
-import com.glaze.autumn.instantiator.model.InstantiationQueuedModel;
+import com.glaze.autumn.instantiator.model.InstantiationModel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -10,7 +10,7 @@ import java.lang.reflect.Method;
 public interface Runner {
     Logger logger = LogManager.getLogger(Runner.class);
 
-    static void runApplication(InstantiationQueuedModel mainModel){
+    static void runApplication(InstantiationModel mainModel){
         Class<?> mainModelType = mainModel.getClassModel().getType();
         Object instance = mainModel.getInstance();
 

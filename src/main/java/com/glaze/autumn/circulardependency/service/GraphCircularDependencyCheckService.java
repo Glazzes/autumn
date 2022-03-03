@@ -3,17 +3,18 @@ package com.glaze.autumn.circulardependency.service;
 import com.glaze.autumn.circulardependency.exception.CircularDependencyCheckException;
 import com.glaze.autumn.circulardependency.exception.CircularDependencyExceptionHandler;
 import com.glaze.autumn.clscanner.model.ClassModel;
+import com.glaze.autumn.instantiator.exception.ComponentNotFoundException;
 
 import java.lang.reflect.Field;
 import java.util.*;
 
-public class SimpCircularDependencyCheckService implements CircularDependencyCheckService {
+public class GraphCircularDependencyCheckService implements CircularDependencyCheckService {
     private final CircularDependencyExceptionHandler exceptionHandler = new CircularDependencyExceptionHandler();
 
     private final Class<?> startUpClass;
     private final Set<ClassModel> classModels;
 
-    public SimpCircularDependencyCheckService(
+    public GraphCircularDependencyCheckService(
             Set<ClassModel> classModels,
             Class<?> startUpClass
     ){
@@ -56,6 +57,16 @@ public class SimpCircularDependencyCheckService implements CircularDependencyChe
         currentBranch.add(currentNode);
 
         Set<Class<?>> currentNodeDependencies = graph.get(currentNode);
+        if(currentNodeDependencies == null) {
+            Class<?> previousNode = currentBranch.peek();
+            String errorMessage = String.format(
+                    "%s requires a bean of type %s that could not be found",
+                    previousNode.getName(),
+                    currentNode.getName());
+
+            throw new ComponentNotFoundException(errorMessage);
+        }
+
         for(Class<?> dependency : currentNodeDependencies) {
             this.checkCircularDependenciesRecursively(graph, dependency, currentBranch);
         }

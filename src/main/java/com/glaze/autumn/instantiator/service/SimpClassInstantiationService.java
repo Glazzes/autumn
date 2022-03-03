@@ -4,7 +4,7 @@ import com.glaze.autumn.annotations.*;
 import com.glaze.autumn.clscanner.model.ClassModel;
 import com.glaze.autumn.instantiator.exception.ComponentNotFoundException;
 import com.glaze.autumn.instantiator.exception.DuplicatedIdentifierException;
-import com.glaze.autumn.instantiator.model.InstantiationQueuedModel;
+import com.glaze.autumn.instantiator.model.InstantiationModel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -17,19 +17,19 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class SimpClassInstantiationService implements ClassInstantiationService, MissingDependencyScanner {
-    private final Queue<InstantiationQueuedModel> queuedModels;
+    private final Queue<InstantiationModel> queuedModels;
     private final Map<String, Object> availableInstances = new HashMap<>();
     private final Logger logger = LogManager.getLogger(SimpClassInstantiationService.class);
 
     public SimpClassInstantiationService(Set<ClassModel> clsModels){
         this.queuedModels = clsModels.stream()
                 .sorted(Comparator.comparing(model -> model.getConstructor().getParameterCount()))
-                .map(InstantiationQueuedModel::new)
+                .map(InstantiationModel::new)
                 .collect(Collectors.toCollection(ArrayDeque::new));
     }
 
-    public InstantiationQueuedModel instantiateMainClass(InstantiationQueuedModel mainModel){
-        logger.debug("Instantiating " + mainModel.getClassModel().getType() + " class");
+    public InstantiationModel instantiateMainClass(InstantiationModel mainModel){
+        logger.debug("Instantiating " + mainModel.getType() + " class");
         try{
             this.resolveConstructorDependencies(mainModel);
             if(mainModel.hasConstructorDependenciesResolved()){
@@ -59,7 +59,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         int counter = 0;
         while (!queuedModels.isEmpty()){
             if(counter > 1000) break;
-            InstantiationQueuedModel queuedModel = queuedModels.poll();
+            InstantiationModel queuedModel = queuedModels.poll();
             attemptInstantiation(queuedModel);
             counter++;
         }
@@ -72,7 +72,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         logger.debug("Project classes have been instantiated correctly");
     }
 
-    private void attemptInstantiation(InstantiationQueuedModel model){
+    private void attemptInstantiation(InstantiationModel model){
         try{
             this.resolveConstructorDependencies(model);
             this.attemptConstructorInstantiation(model);
@@ -83,11 +83,12 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
             }
 
             if(model.isModelResolved()){
-                String classId = this.generateClassId(model.getClassModel());
+                // String classId = this.generateClassId(model.getClassModel());
+                String classId = "";
                 if(availableInstances.containsKey(classId)){
                     String errorMessage = String.format("""
                     Can not instantiate %s because id "%s" is already use by another component
-                    """, model.getClassModel().getType(), classId);
+                    """, model.getType(), classId);
 
                     throw new DuplicatedIdentifierException(errorMessage);
                 }
@@ -104,7 +105,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         }
     }
 
-    public void resolveConstructorDependencies(InstantiationQueuedModel model){
+    public void resolveConstructorDependencies(InstantiationModel model){
         for(int i = 0; i < model.getConstructorParameterTypes().length; i++){
             Class<?> dependencyType = model.getConstructorParameterTypes()[i];
             Object instance = model.getConstructorDependencyInstances()[i];
@@ -137,9 +138,9 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         }
     }
 
-    private void attemptConstructorInstantiation(InstantiationQueuedModel model) throws Exception{
+    private void attemptConstructorInstantiation(InstantiationModel model) throws Exception{
         if(model.hasConstructorDependenciesResolved() && model.getInstance() == null) {
-            Constructor<?> classConstructor = model.getClassModel().getConstructor();
+            Constructor<?> classConstructor = model.getConstructor();
             Object[] params = model.getConstructorDependencyInstances();
             if(params.length == 0){
                 Object instance = classConstructor.newInstance();
@@ -152,11 +153,10 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         }
     }
 
-    public void invokePostConstructMethod(InstantiationQueuedModel model){
+    public void invokePostConstructMethod(InstantiationModel model){
         try{
             Object instance = model.getInstance();
-            Method postConstruct = model.getClassModel()
-                    .getPostConstruct();
+            Method postConstruct = model.getPostConstruct();
 
             if(postConstruct != null){
                 postConstruct.invoke(instance);
@@ -166,7 +166,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         }
     }
 
-    public void resolveAutowiredFieldsDependencies(InstantiationQueuedModel model){
+    public void resolveAutowiredFieldsDependencies(InstantiationModel model){
         Field[] autowiredFields = model.getAutowiredFields();
         if(autowiredFields == null) return;
 
@@ -199,7 +199,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
         }
     }
 
-    private void assignAutowiredFieldDependencies(InstantiationQueuedModel model){
+    private void assignAutowiredFieldDependencies(InstantiationModel model){
         if(model.getAutowiredFields() == null) return;
         if(model.getAutowiredFields().length == 0) return;
 
@@ -267,7 +267,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
 
     @Override
     public void scanMissingAutowiredDependencies() {
-        for(InstantiationQueuedModel model : queuedModels){
+        for(InstantiationModel model : queuedModels){
             if(model.getAutowiredFields() == null) continue;
 
             Field[] autowiredFields = model.getAutowiredFields();
@@ -277,7 +277,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
                         Qualifier qualifier = autowiredFields[field].getAnnotation(Qualifier.class);
                         String errorMessage = String.format(
                                 "%s required a bean of type %s with id %s that could not be found, consider declaring one",
-                                model.getClassModel().getType(),
+                                model.getType(),
                                 autowiredFields[field].getType().getTypeName(),
                                 qualifier.id()
                         );
@@ -287,7 +287,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
 
                     String errorMessage = String.format(
                             "%s required a bean of type %s that could not be found, consider declaring one",
-                            model.getClassModel().getType(),
+                            model.getType(),
                             autowiredFields[field].getType().getTypeName()
                     );
 
@@ -299,14 +299,14 @@ public class SimpClassInstantiationService implements ClassInstantiationService,
 
     @Override
     public void scanMissingConstructorDependencies() {
-        for(InstantiationQueuedModel model : queuedModels){
+        for(InstantiationModel model : queuedModels){
             Class<?>[] constructorDependencies = model.getConstructorParameterTypes();
             for(int dep = 0; dep < constructorDependencies.length; dep++){
                 Object dependency = model.getConstructorDependencyInstances()[dep];
                 if(dependency == null){
                     String errorMessage = String.format(
                     "%s's required a bean of type %s that could not be found, consider declaring one.",
-                           model.getClassModel().getType(),
+                           model.getType(),
                            model.getConstructorParameterTypes()[dep]
                     );
 

@@ -5,29 +5,34 @@ import com.glaze.autumn.clscanner.model.ClassModel;
 import com.glaze.autumn.instantiator.exception.ComponentNotFoundException;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
 
-public class InstantiationQueuedModel {
-    private final ClassModel classModel;
+public class InstantiationModel {
+    private final Class<?> type;
+    private final Constructor<?> constructor;
     private final Annotation[][] constructorParameterAnnotations;
     private final Class<?>[] constructorParameterTypes;
     private final Object[] constructorDependencyInstances;
     private final Field[] autowiredFields;
     private final Object[] autowiredFieldDependencyInstances;
     private final Method[] beans;
+    private final Method postConstruct;
     private Object instance;
 
-    public InstantiationQueuedModel(ClassModel clsModel){
-        this.classModel = clsModel;
-        this.constructorParameterAnnotations = clsModel.getConstructor().getParameterAnnotations();
-        this.constructorParameterTypes = clsModel.getConstructor().getParameterTypes();
+    public InstantiationModel(ClassModel classModel){
+        this.type = classModel.getType();
+        this.constructor = classModel.getConstructor();
+        this.constructorParameterAnnotations = classModel.getConstructor().getParameterAnnotations();
+        this.constructorParameterTypes = classModel.getConstructor().getParameterTypes();
         this.constructorDependencyInstances = new Object[this.constructorParameterTypes.length];
-        this.autowiredFields = clsModel.getAutowiredFields();
+        this.autowiredFields = classModel.getAutowiredFields();
         this.autowiredFieldDependencyInstances = new Object[autowiredFields == null ? 0 : autowiredFields.length];
         this.beans = classModel.getBeans();
+        this.postConstruct = classModel.getPostConstruct();
     }
 
     public boolean isModelResolved(){
@@ -57,7 +62,7 @@ public class InstantiationQueuedModel {
                 Qualifier qualifier = currentField.getAnnotation(Qualifier.class);
                 String errorMessage = String.format("""
                 %s required a bean of type %s with id %s that could not be found, consider declaring one.
-                """, classModel.getType(), currentField.getType(), qualifier.id());
+                """, this.getType(), currentField.getType(), qualifier.id());
 
                 throw new ComponentNotFoundException(errorMessage);
             }
@@ -85,7 +90,7 @@ public class InstantiationQueuedModel {
                             Constructor of %s required a bean of type %s with id "%s" that could not be found, consider
                             declaring one.
                             """,
-                            classModel.getType(),
+                            this.getType(),
                             dependencyType,
                             qualifier.id()
                     );
@@ -95,7 +100,7 @@ public class InstantiationQueuedModel {
             }
 
             if(instance == null){
-                Class<?> type = classModel.getType();
+                Class<?> type = this.getType();
                 String errorMessage = String.format("""
                 Constructor of %s required a bean of type %s that could not be found or instantiated properly
                 """, type, constructorParameterTypes[dep]);
@@ -103,10 +108,6 @@ public class InstantiationQueuedModel {
                 throw new ComponentNotFoundException(errorMessage);
             }
         }
-    }
-
-    public ClassModel getClassModel() {
-        return classModel;
     }
 
     public Annotation[][] getConstructorParameterAnnotations() {
@@ -139,5 +140,17 @@ public class InstantiationQueuedModel {
 
     public Method[] getBeans() {
         return beans;
+    }
+
+    public Class<?> getType() {
+        return type;
+    }
+
+    public Constructor<?> getConstructor() {
+        return constructor;
+    }
+
+    public Method getPostConstruct() {
+        return postConstruct;
     }
 }

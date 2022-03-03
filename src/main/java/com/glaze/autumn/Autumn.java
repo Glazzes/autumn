@@ -4,10 +4,10 @@ import static com.glaze.autumn.application.Runner.*;
 import static com.glaze.autumn.application.EnvironmentResolver.*;
 import static com.glaze.autumn.application.ClsLoader.*;
 
-import com.glaze.autumn.circulardependency.service.SimpCircularDependencyCheckService;
+import com.glaze.autumn.circulardependency.service.GraphCircularDependencyCheckService;
 import com.glaze.autumn.clscanner.model.ClassModel;
 import com.glaze.autumn.clslocator.model.Environment;
-import com.glaze.autumn.instantiator.model.InstantiationQueuedModel;
+import com.glaze.autumn.instantiator.model.InstantiationModel;
 import com.glaze.autumn.instantiator.service.SimpClassInstantiationService;
 import com.glaze.autumn.clscanner.service.SimpClassScannerService;
 import com.glaze.autumn.test.One;
@@ -36,13 +36,13 @@ public class Autumn{
 
         var instantiationService = new SimpClassInstantiationService(suitableClasses);
         instantiationService.instantiateComponents();
-        var resolvedModel = instantiationService.instantiateMainClass(new InstantiationQueuedModel(mainModel));
+        var resolvedModel = instantiationService.instantiateMainClass(new InstantiationModel(mainModel));
         runApplication(resolvedModel);
     }
 
     private static void scanCircularDependencies(Class<?> startUpClass, Set<ClassModel> suitableClasses) {
         logger.debug("Look for circular dependencies in your project... \uD83D\uDCA4");
-        var circularDependencyDetectionService = new SimpCircularDependencyCheckService(suitableClasses, startUpClass);
+        var circularDependencyDetectionService = new GraphCircularDependencyCheckService(suitableClasses, startUpClass);
         circularDependencyDetectionService.checkProjectDependencies();
         logger.debug("No circular dependencies detected ✅");
     }

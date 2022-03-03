@@ -10,8 +10,7 @@ public class CircularDependencyExceptionHandler {
 
         builder.append("""
                 A circular dependency has been found among the following classes.\s
-                .______.
-                |      |
+                |¯¯¯¯¯¯¯|
                 """);
 
         this.addClassesToErrorMessage(inBetweenClasses);
@@ -27,10 +26,12 @@ public class CircularDependencyExceptionHandler {
         List<Class<?>> inBetweenClasses = new ArrayList<>();
 
         for(Class<?> clazz : nodes) {
+            if(hasFoundConflictingClass) {
+                inBetweenClasses.add(clazz);
+            }
+
             if(!hasFoundConflictingClass && clazz.equals(conflictingClass)) {
                 hasFoundConflictingClass = true;
-                inBetweenClasses.add(clazz);
-            }else{
                 inBetweenClasses.add(clazz);
             }
         }
