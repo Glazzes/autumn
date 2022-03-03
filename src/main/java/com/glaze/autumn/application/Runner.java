@@ -10,14 +10,13 @@ import java.lang.reflect.Method;
 public interface Runner {
     Logger logger = LogManager.getLogger(Runner.class);
 
-    static void runApplication(InstantiationModel mainModel){
-        Class<?> mainModelType = mainModel.getClassModel().getType();
-        Object instance = mainModel.getInstance();
+    static void runApplication(Object instance){
+        Class<?> instanceType = instance.getClass();
 
         logger.debug("Application started \uD83C\uDF1F");
-        if(CommandLineRunner.class.isAssignableFrom(mainModelType)){
+        if(CommandLineRunner.class.isAssignableFrom(instanceType)){
            try{
-               Method runMethod = mainModelType.getMethod("run");
+               Method runMethod = instanceType.getMethod("run");
                if(runMethod.getReturnType().equals(void.class)
                  && runMethod.getParameterCount() == 0){
                    runMethod.invoke(instance);

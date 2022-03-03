@@ -50,16 +50,16 @@ Maven
 <dependency>
     <groupId>com.glaze.autumn</groupId>
     <artifactId>glaze-autumn</artifactId>
-    <version>1.1</version>
+    <version>1.3</version>
 </dependency>
 ```
 
 Gradle
 ```
-implementation 'com.glaze.autumn:glaze-autumn:1.1'
+implementation 'com.glaze.autumn:glaze-autumn:1.3'
 ```
 
 Gradle kts
 ```
-implementation("com.glaze.autumn:glaze-autumn:1.1")
+implementation("com.glaze.autumn:glaze-autumn:1.3")
 ```

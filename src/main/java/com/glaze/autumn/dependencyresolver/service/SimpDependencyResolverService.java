@@ -64,6 +64,7 @@ public class SimpDependencyResolverService implements DependencyResolverService 
             for (Object dependency : availableInstances.values()) {
                 if(currentDependencyType.isAssignableFrom(dependency.getClass()) && currentConstructorInstance == null){
                     model.getConstructorDependencyInstances()[i] = dependency;
+                    System.out.println("added cons");
                 }
             }
 

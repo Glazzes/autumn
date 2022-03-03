@@ -33,6 +33,7 @@ public class InstantiationModel {
         this.autowiredFieldDependencyInstances = new Object[autowiredFields == null ? 0 : autowiredFields.length];
         this.beans = classModel.getBeans();
         this.postConstruct = classModel.getPostConstruct();
+        this.instance = null;
     }
 
     public boolean isModelResolved(){
@@ -47,7 +48,6 @@ public class InstantiationModel {
     }
 
     public boolean hasAutowiredFieldsResolved(){
-        if(this.autowiredFields == null) return true;
         if(this.autowiredFieldDependencyInstances.length == 0) return true;
         return Arrays.stream(this.autowiredFieldDependencyInstances)
                 .noneMatch(Objects::isNull);

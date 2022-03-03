@@ -1,14 +1,13 @@
 package com.glaze.autumn.instantiator.service;
 
-import com.glaze.autumn.annotations.*;
 import com.glaze.autumn.clscanner.model.ClassModel;
-import com.glaze.autumn.instantiator.exception.ComponentNotFoundException;
+import com.glaze.autumn.dependencyresolver.service.DependencyResolverService;
+import com.glaze.autumn.dependencyresolver.service.MissingDependencyHandler;
+import com.glaze.autumn.dependencyresolver.service.SimpDependencyResolverService;
+import com.glaze.autumn.dependencyresolver.service.SimpMissingDependencyHandler;
 import com.glaze.autumn.instantiator.exception.DuplicatedIdentifierException;
 import com.glaze.autumn.instantiator.model.InstantiationModel;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -16,308 +15,141 @@ import java.lang.reflect.Method;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class SimpClassInstantiationService implements ClassInstantiationService, MissingDependencyScanner {
-    private final Queue<InstantiationModel> queuedModels;
+public class SimpClassInstantiationService implements ClassInstantiationService {
+    private final Queue<InstantiationModel> instantiationModels;
     private final Map<String, Object> availableInstances = new HashMap<>();
-    private final Logger logger = LogManager.getLogger(SimpClassInstantiationService.class);
+    private final DependencyResolverService dependencyResolverService = new SimpDependencyResolverService();
+    private final MissingDependencyHandler missingDependencyHandler = new SimpMissingDependencyHandler();
+    private final int MAXIMUM_NUMBER_OF_ITERATIONS = 10000;
 
-    public SimpClassInstantiationService(Set<ClassModel> clsModels){
-        this.queuedModels = clsModels.stream()
+    public SimpClassInstantiationService(Set<ClassModel> classModels) {
+        this.instantiationModels = classModels.stream()
                 .sorted(Comparator.comparing(model -> model.getConstructor().getParameterCount()))
                 .map(InstantiationModel::new)
                 .collect(Collectors.toCollection(ArrayDeque::new));
     }
 
-    public InstantiationModel instantiateMainClass(InstantiationModel mainModel){
-        logger.debug("Instantiating " + mainModel.getType() + " class");
-        try{
-            this.resolveConstructorDependencies(mainModel);
-            if(mainModel.hasConstructorDependenciesResolved()){
-                this.attemptConstructorInstantiation(mainModel);
-            }
-
-            this.resolveAutowiredFieldsDependencies(mainModel);
-            if(mainModel.hasAutowiredFieldsResolved()){
-                this.assignAutowiredFieldDependencies(mainModel);
-            }
-        }catch (Exception e){
-            e.printStackTrace();
-        }
-
-        if(!mainModel.isModelResolved()){
-            mainModel.onUnresolvedAutowiredFieldDependencies();
-            mainModel.onUnresolvedConstructorDependencies();
-        }
-
-        logger.debug("Main class has been instantiated correctly");
-        return mainModel;
-    }
-
     @Override
-    public void instantiateComponents() {
-        logger.debug("Instantiating classes");
-        int counter = 0;
-        while (!queuedModels.isEmpty()){
-            if(counter > 1000) break;
-            InstantiationModel queuedModel = queuedModels.poll();
-            attemptInstantiation(queuedModel);
-            counter++;
-        }
+    public void instantiate() {
+        int iterations = 0;
+        while (!this.instantiationModels.isEmpty()) {
+            if (iterations > MAXIMUM_NUMBER_OF_ITERATIONS) break;
+            InstantiationModel currentModel = instantiationModels.poll();
 
-        if(queuedModels.size() > 0){
-            scanMissingAutowiredDependencies();
-            scanMissingConstructorDependencies();
-        }
-
-        logger.debug("Project classes have been instantiated correctly");
-    }
-
-    private void attemptInstantiation(InstantiationModel model){
-        try{
-            this.resolveConstructorDependencies(model);
-            this.attemptConstructorInstantiation(model);
-
-            this.resolveAutowiredFieldsDependencies(model);
-            if(model.hasAutowiredFieldsResolved()){
-                this.assignAutowiredFieldDependencies(model);
+            dependencyResolverService.resolveConstructorDependencies(currentModel, availableInstances);
+            if(currentModel.hasConstructorDependenciesResolved()){
+                this.performConstructorInstantiation(currentModel);
             }
 
-            if(model.isModelResolved()){
-                // String classId = this.generateClassId(model.getClassModel());
-                String classId = "";
-                if(availableInstances.containsKey(classId)){
-                    String errorMessage = String.format("""
-                    Can not instantiate %s because id "%s" is already use by another component
-                    """, model.getType(), classId);
-
-                    throw new DuplicatedIdentifierException(errorMessage);
-                }
-
-                this.availableInstances.put(classId, model.getInstance());
-                this.instantiateBeans(model.getBeans(), model.getInstance());
-
-                this.invokePostConstructMethod(model);
-            }else{
-                queuedModels.add(model);
+            dependencyResolverService.resolveAutowiredFieldDependencies(currentModel, availableInstances);
+            if (currentModel.hasAutowiredFieldsResolved()) {
+                this.performAutowiredFieldAssignment(currentModel);
             }
-        }catch (Exception e){
-            e.printStackTrace();
+
+            if (currentModel.isModelResolved()) {
+                this.addAvailableInstance(currentModel);
+                this.invokeAndSaveBeans(currentModel);
+                this.invokePostConstructMethod(currentModel);
+            } else {
+                instantiationModels.add(currentModel);
+            }
+
+            iterations++;
+        }
+
+        if(instantiationModels.size() > 0){
+            missingDependencyHandler.scanForMissingConstructorDependencies(this.instantiationModels);
+            missingDependencyHandler.scanForMissingFieldDependencies(this.instantiationModels);
         }
     }
 
-    public void resolveConstructorDependencies(InstantiationModel model){
-        for(int i = 0; i < model.getConstructorParameterTypes().length; i++){
-            Class<?> dependencyType = model.getConstructorParameterTypes()[i];
-            Object instance = model.getConstructorDependencyInstances()[i];
-            Annotation[] dependencyAnnotations = model.getConstructorParameterAnnotations()[i];
-
-            if(dependencyAnnotations != null && dependencyAnnotations.length > 0){
-                Qualifier qualifier = null;
-                for(Annotation ann : dependencyAnnotations){
-                    if(Qualifier.class.isAssignableFrom(ann.getClass())){
-                        qualifier = (Qualifier) ann;
-                        break;
-                    }
+    private void performConstructorInstantiation(InstantiationModel model) {
+        try {
+            if (model.getInstance() == null) {
+                Constructor<?> classConstructor = model.getConstructor();
+                Object[] params = model.getConstructorDependencyInstances();
+                if (params.length == 0) {
+                    Object instance = classConstructor.newInstance();
+                    model.setInstance(instance);
+                    return;
                 }
 
-                if(qualifier != null && instance == null){
-                    Object availableInstance = availableInstances.get(qualifier.id());
-                    if(availableInstance != null){
-                        model.getConstructorDependencyInstances()[i] = availableInstance;
-                    }
-
-                    continue;
-                }
-            }
-
-            for (Object dependency : availableInstances.values()) {
-                if(dependencyType.isAssignableFrom(dependency.getClass()) && instance == null){
-                    model.getConstructorDependencyInstances()[i] = dependency;
-                }
-            }
-        }
-    }
-
-    private void attemptConstructorInstantiation(InstantiationModel model) throws Exception{
-        if(model.hasConstructorDependenciesResolved() && model.getInstance() == null) {
-            Constructor<?> classConstructor = model.getConstructor();
-            Object[] params = model.getConstructorDependencyInstances();
-            if(params.length == 0){
-                Object instance = classConstructor.newInstance();
+                Object instance = classConstructor.newInstance(params);
                 model.setInstance(instance);
-                return;
             }
-
-            Object instance = classConstructor.newInstance(params);
-            model.setInstance(instance);
-        }
-    }
-
-    public void invokePostConstructMethod(InstantiationModel model){
-        try{
-            Object instance = model.getInstance();
-            Method postConstruct = model.getPostConstruct();
-
-            if(postConstruct != null){
-                postConstruct.invoke(instance);
-            }
-        }catch (IllegalAccessException|InvocationTargetException e){
+        } catch (InstantiationException | InvocationTargetException | IllegalAccessException e) {
             e.printStackTrace();
         }
     }
 
-    public void resolveAutowiredFieldsDependencies(InstantiationModel model){
-        Field[] autowiredFields = model.getAutowiredFields();
-        if(autowiredFields == null) return;
-
-        for(int i = 0; i < autowiredFields.length; i++){
-            Field currentField = autowiredFields[i];
-            Class<?> fieldType = currentField.getType();
-
-            if(currentField.isAnnotationPresent(Qualifier.class)){
-                Qualifier qualifier = currentField.getAnnotation(Qualifier.class);
-                String componentId = qualifier.id();
-
-                Object dependency = availableInstances.get(componentId);
-                if(dependency != null){
-                    Class<?> dependencyType = dependency.getClass();
-                    if(fieldType.isAssignableFrom(dependencyType)){
-                        model.getAutowiredFieldDependencyInstances()[i] = dependency;
-                    }
-                }
-
-                continue;
-            }
-
-            for (Object dependency : this.availableInstances.values()) {
-                if(dependency.getClass().isAssignableFrom(fieldType)
-                   && model.getAutowiredFieldDependencyInstances()[i] == null){
-                    model.getAutowiredFieldDependencyInstances()[i] = dependency;
-                }
-            }
-
-        }
-    }
-
-    private void assignAutowiredFieldDependencies(InstantiationModel model){
-        if(model.getAutowiredFields() == null) return;
-        if(model.getAutowiredFields().length == 0) return;
+    private void performAutowiredFieldAssignment(InstantiationModel model) {
+        if (model.getAutowiredFields() == null) return;
+        if (model.getAutowiredFields().length == 0) return;
 
         Object instance = model.getInstance();
         Field[] autowiredFields = model.getAutowiredFields();
-        for(int i = 0; i < autowiredFields.length; i++){
+        for (int i = 0; i < autowiredFields.length; i++) {
             Field autowiredField = autowiredFields[i];
             Object autowiredFieldDependency = model.getAutowiredFieldDependencyInstances()[i];
             try {
                 autowiredField.set(instance, autowiredFieldDependency);
-            }catch (IllegalAccessException e){
+            } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
         }
     }
 
-    private String generateClassId(ClassModel model){
-        Class<?> classType = model.getType();
-        String componentName = model.getType().getTypeName();
+    private void addAvailableInstance(InstantiationModel model) {
+        Object instance = model.getInstance();
+        String instanceId = instance.getClass().getName();
 
-        if(classType.isAnnotationPresent(Service.class)){
-            Service serviceAnnotation = classType.getAnnotation(Service.class);
-            if(!serviceAnnotation.id().isBlank()){
-                return serviceAnnotation.id();
-            }
+        if (this.availableInstances.containsKey(instanceId)) {
+            String errorMessage = String.format("""
+                    Can not instantiate %s because id "%s" is already use by another component
+                    """, model.getType(), instanceId);
+
+            throw new DuplicatedIdentifierException(errorMessage);
         }
 
-        if(model.getType().isAnnotationPresent(Repository.class)){
-            Repository repositoryAnnotation = classType.getAnnotation(Repository.class);
-            if(!repositoryAnnotation.id().isBlank()){
-                return repositoryAnnotation.id();
-            }
-        }
-
-        if(classType.isAnnotationPresent(Component.class)){
-            Component componentAnnotation = classType.getAnnotation(Component.class);
-            if(!componentAnnotation.id().isBlank()){
-                return componentAnnotation.id();
-            }
-        }
-
-        return componentName;
+        this.availableInstances.put(instanceId, instance);
     }
 
-    @Override
-    public void instantiateBeans(Method[] beans, Object instance) {
-        if(beans == null) return;
+    public void invokePostConstructMethod(InstantiationModel model) {
+        try {
+            Object instance = model.getInstance();
+            Method postConstruct = model.getPostConstruct();
 
-        try{
+            if (postConstruct != null) {
+                postConstruct.invoke(instance);
+            }
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void invokeAndSaveBeans(InstantiationModel model) {
+        Method[] beans = model.getBeans();
+        Object instance = model.getInstance();
+
+        try {
             for (Method method : beans) {
                 Object beanInstance = method.invoke(instance);
                 String beanId = method.getName();
 
                 boolean exists = availableInstances.containsKey(beanId);
-                if(exists){
+                if (exists) {
                     throw new DuplicatedIdentifierException("There's already a bean with id " + beanId);
                 }
 
                 this.availableInstances.put(beanId, beanInstance);
             }
-        }catch (IllegalAccessException | InvocationTargetException e){
+        } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
         }
     }
 
     @Override
-    public void scanMissingAutowiredDependencies() {
-        for(InstantiationModel model : queuedModels){
-            if(model.getAutowiredFields() == null) continue;
-
-            Field[] autowiredFields = model.getAutowiredFields();
-            for(int field = 0; field < autowiredFields.length; field++){
-                if(model.getAutowiredFieldDependencyInstances()[field] == null){
-                    if(autowiredFields[field].isAnnotationPresent(Qualifier.class)){
-                        Qualifier qualifier = autowiredFields[field].getAnnotation(Qualifier.class);
-                        String errorMessage = String.format(
-                                "%s required a bean of type %s with id %s that could not be found, consider declaring one",
-                                model.getType(),
-                                autowiredFields[field].getType().getTypeName(),
-                                qualifier.id()
-                        );
-
-                        throw new ComponentNotFoundException(errorMessage);
-                    }
-
-                    String errorMessage = String.format(
-                            "%s required a bean of type %s that could not be found, consider declaring one",
-                            model.getType(),
-                            autowiredFields[field].getType().getTypeName()
-                    );
-
-                    throw new ComponentNotFoundException(errorMessage);
-                }
-            }
-        }
-    }
-
-    @Override
-    public void scanMissingConstructorDependencies() {
-        for(InstantiationModel model : queuedModels){
-            Class<?>[] constructorDependencies = model.getConstructorParameterTypes();
-            for(int dep = 0; dep < constructorDependencies.length; dep++){
-                Object dependency = model.getConstructorDependencyInstances()[dep];
-                if(dependency == null){
-                    String errorMessage = String.format(
-                    "%s's required a bean of type %s that could not be found, consider declaring one.",
-                           model.getType(),
-                           model.getConstructorParameterTypes()[dep]
-                    );
-
-                    throw new ComponentNotFoundException(errorMessage);
-                }
-            }
-        }
-    }
-
-    @Override
-    public Map<String, Object> getInstances() {
-        return this.availableInstances;
+    public Collection<Object> getInstances() {
+        return this.availableInstances.values();
     }
 }

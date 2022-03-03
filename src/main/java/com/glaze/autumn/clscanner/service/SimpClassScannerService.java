@@ -30,7 +30,7 @@ public class SimpClassScannerService implements ClassScannerService {
     }
 
     @Override
-    public Set<ClassModel> scan() {
+    public Set<ClassModel> scanProjectClasses() {
         Set<ClassModel> model = this.locatedClasses.stream()
                 .filter(this::findClassFiles)
                 .filter(this::findComponentClasses)
@@ -38,13 +38,6 @@ public class SimpClassScannerService implements ClassScannerService {
                 .collect(Collectors.toSet());
 
         logger.debug("Project class's data loaded successfully");
-        return model;
-    }
-
-    public ClassModel scanMainClasses(Class<?> cls){
-        ClassModel model = this.newClassModelInstance(cls);
-        logger.debug("Main class data loaded successfully");
-
         return model;
     }
 

@@ -1,10 +1,11 @@
 package com.glaze.autumn.instantiator.service;
 
-import java.lang.reflect.Method;
+import com.glaze.autumn.instantiator.model.InstantiationModel;
+
+import java.util.Collection;
 import java.util.Map;
 
 public interface ClassInstantiationService {
-    void instantiateComponents();
-    void instantiateBeans(Method[] beans, Object instance);
-    Map<String, Object> getInstances();
+    void instantiate();
+    Collection<Object> getInstances();
 }
