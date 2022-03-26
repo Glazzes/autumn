@@ -17,6 +17,7 @@ at execution time to create new libraries.
 * @Qualifer constructor based injection
 * Bean method instantiation
 * Circular dependency injection detection
+* Multi project build support through  @ComponentScan annotation and "Jar in Jar" introspection
 * Bean based circular dependency check (TODO)
 
 ### Building the project
@@ -31,7 +32,7 @@ maven local repository.
 ### Usage
 If you're using Maven this one will recognize by default all local 
 libraries if any, but if you're running it with gradle you'll need to add
-mavenLocal() into repositories declaration of your `build.gradle` file.
+mavenLocal() into repositories closure of your `build.gradle` file.
 ```
 repositories {
    mavenLocal() // <- add this

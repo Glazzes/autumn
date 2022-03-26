@@ -13,14 +13,16 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class SimpClassInstantiationService implements ClassInstantiationService {
     private final Queue<InstantiationModel> instantiationModels;
     private final Map<String, Object> availableInstances = new HashMap<>();
+    private final Logger logger = Logger.getLogger(this.getClass().getName());
     private final DependencyResolverService dependencyResolverService = new SimpDependencyResolverService();
     private final MissingDependencyHandler missingDependencyHandler = new SimpMissingDependencyHandler();
-    private final int MAXIMUM_NUMBER_OF_ITERATIONS = 10000;
+    private static final int MAXIMUM_NUMBER_OF_ITERATIONS = 10000;
 
     public SimpClassInstantiationService(Set<ClassModel> classModels) {
         this.instantiationModels = classModels.stream()
@@ -31,6 +33,8 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
 
     @Override
     public void instantiate() {
+        logger.info("Instantiating classes \uD83D\uDD25");
+
         int iterations = 0;
         while (!this.instantiationModels.isEmpty()) {
             if (iterations > MAXIMUM_NUMBER_OF_ITERATIONS) break;
@@ -61,6 +65,8 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
             missingDependencyHandler.scanForMissingConstructorDependencies(this.instantiationModels);
             missingDependencyHandler.scanForMissingFieldDependencies(this.instantiationModels);
         }
+
+        logger.info("All project classes were instantiated correctly ✅");
     }
 
     private void performConstructorInstantiation(InstantiationModel model) {

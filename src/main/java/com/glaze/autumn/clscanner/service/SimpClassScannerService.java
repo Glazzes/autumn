@@ -1,32 +1,30 @@
 package com.glaze.autumn.clscanner.service;
 
 import com.glaze.autumn.clscanner.exception.InvalidMethodSignatureException;
-import com.glaze.autumn.configuration.annotation.AnnotationConfiguration;
-import com.glaze.autumn.configuration.annotation.BasicContainerConfiguration;
 import com.glaze.autumn.clscanner.model.ClassModel;
 import com.glaze.autumn.annotations.Autowired;
 import com.glaze.autumn.annotations.Bean;
 import com.glaze.autumn.annotations.PostConstruct;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import com.glaze.autumn.annotations.configuration.Annotations;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 public class SimpClassScannerService implements ClassScannerService {
-    private Set<Class<?>> locatedClasses;
-    private AnnotationConfiguration annotationConfiguration;
-    private final Logger logger = LogManager.getLogger(ClassScannerService.class);
+    private final Collection<Class<?>> locatedClasses;
+    private final Annotations annotations;
+    private final Logger logger = Logger.getLogger(SimpClassScannerService.class.getCanonicalName());
 
-    public SimpClassScannerService(){}
-
-    public SimpClassScannerService(Set<Class<?>> locatedClasses){
+    public SimpClassScannerService(Collection<Class<?>> locatedClasses){
         this.locatedClasses = locatedClasses;
-        this.annotationConfiguration = new BasicContainerConfiguration();
+        this.annotations = new Annotations();
     }
 
     @Override
@@ -37,7 +35,7 @@ public class SimpClassScannerService implements ClassScannerService {
                 .map(this::newClassModelInstance)
                 .collect(Collectors.toSet());
 
-        logger.debug("Project class's data loaded successfully");
+        logger.log(Level.INFO, "Project classes loaded successfully");
         return model;
     }
 
@@ -60,7 +58,7 @@ public class SimpClassScannerService implements ClassScannerService {
     }
 
     private boolean findComponentClasses(Class<?> cls){
-        return annotationConfiguration.getComponentAnnotations()
+        return this.annotations.getAnnotations()
                 .stream()
                 .anyMatch(cls::isAnnotationPresent);
     }

@@ -1,45 +1,71 @@
 package com.glaze.autumn.clslocator.service;
 
+import com.glaze.autumn.application.exception.AutumnApplicationException;
 import com.glaze.autumn.clslocator.model.Environment;
-import com.glaze.autumn.clslocator.constants.FileConstants;
+import com.glaze.autumn.util.ClassUtils;
+import com.glaze.autumn.util.JarUtils;
 
 import java.io.File;
-import java.io.IOException;
-import java.util.Enumeration;
-import java.util.HashSet;
+import java.util.Collection;
 import java.util.Set;
-import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.stream.Collectors;
 
 public class JarFileClassLocatorService implements ClassLocatorService {
-    private final Set<Class<?>> suitableClasses = new HashSet<>();
+    private final Class<?> startUpClass;
+
+    public JarFileClassLocatorService(Class<?> startUpClass) {
+        this.startUpClass = startUpClass;
+    }
 
     @Override
-    public Set<Class<?>> findAllProjectClasses(Environment environment) {
+    public Set<Class<?>> getProjectClasses(Environment environment) {
         try{
             JarFile jarFile = new JarFile(new File(environment.getPath()));
-            Enumeration<JarEntry> entries = jarFile.entries();
+            String[] basePackages =  ClassUtils.getBasePackages(this.startUpClass);
 
-            while (entries.hasMoreElements()){
-                JarEntry entry = entries.nextElement();
-                if(!entry.isDirectory() && entry.getName().endsWith(FileConstants.CLASS_EXTENSION)){
-                    try{
-                        String clsName = entry.getName()
-                                .replaceAll("[\\\\/]", ".")
-                                .replace(FileConstants.CLASS_EXTENSION, "");
-
-                        Class<?> cls = Class.forName(clsName);
-                        suitableClasses.add(cls);
-                    }catch (ClassNotFoundException e){
-                        e.printStackTrace();
-                    }
-                }
+            if(basePackages == null) {
+                return this.loadClassesFromSingleJar(jarFile);
             }
 
-        }catch (IOException e){
-            e.printStackTrace();
+            return this.loadClassesFromAllProjectJars(jarFile, basePackages);
+        }catch (Exception e) {
+            throw new AutumnApplicationException("We could not locate project's path");
         }
-
-        return suitableClasses;
     }
+
+    private Set<Class<?>> loadClassesFromSingleJar(JarFile jarFile) {
+        Collection<String> classNames = JarUtils.getClassEntries(jarFile);
+
+        return classNames.stream()
+                .map(it -> {
+                    try {
+                        return Class.forName(it);
+                    }catch (ClassNotFoundException e) {
+                        throw new AutumnApplicationException("We could not load " + it  + " class");
+                    }
+                })
+                .collect(Collectors.toSet());
+    }
+
+    private Set<Class<?>> loadClassesFromAllProjectJars(JarFile jarFile, String[] basePackages) {
+        try {
+            ComponentScanService componentScanService = new ComponentScanService(basePackages);
+            componentScanService.findJarEntriesRecursively(jarFile);
+
+            return componentScanService.getClasses()
+                    .stream()
+                    .map(it -> {
+                        try{
+                            return Class.forName(it);
+                        }catch (ClassNotFoundException e) {
+                            throw new AutumnApplicationException("Could not load class " + it);
+                        }
+                    })
+                    .collect(Collectors.toSet());
+        }catch (Exception e) {
+            throw new AutumnApplicationException("Could not load all projects from jar for further scanning");
+        }
+    }
+
 }
