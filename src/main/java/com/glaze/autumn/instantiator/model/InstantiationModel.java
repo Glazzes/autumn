@@ -35,7 +35,8 @@ public class InstantiationModel {
     }
 
     public boolean isModelResolved(){
-        return this.hasConstructorDependenciesResolved()
+        return this.instance != null
+                && this.hasConstructorDependenciesResolved()
                 && this.hasAutowiredFieldsResolved();
     }
 

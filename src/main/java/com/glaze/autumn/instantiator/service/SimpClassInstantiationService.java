@@ -13,7 +13,6 @@ import com.glaze.autumn.instantiator.exception.DuplicatedIdentifierException;
 import com.glaze.autumn.instantiator.model.InstantiationModel;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
@@ -44,13 +43,13 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
             if (iterations > MAXIMUM_NUMBER_OF_ITERATIONS) break;
             InstantiationModel currentModel = instantiationModels.poll();
 
-            dependencyResolverService.resolveConstructorDependencies(currentModel, availableInstances);
+            dependencyResolverService.resolveConstructorDependencies(currentModel, this.availableInstances);
             if(currentModel.hasConstructorDependenciesResolved()){
                 this.performConstructorInstantiation(currentModel);
             }
 
-            dependencyResolverService.resolveAutowiredFieldDependencies(currentModel, availableInstances);
-            if (currentModel.hasAutowiredFieldsResolved()) {
+            dependencyResolverService.resolveAutowiredFieldDependencies(currentModel, this.availableInstances);
+            if (currentModel.hasConstructorDependenciesResolved() && currentModel.hasAutowiredFieldsResolved()) {
                 this.performAutowiredFieldAssignment(currentModel);
             }
 
@@ -96,13 +95,10 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
         if (model.getAutowiredFields() == null) return;
         if (model.getAutowiredFields().length == 0) return;
 
-        Object instance = model.getInstance();
-        Field[] autowiredFields = model.getAutowiredFields();
-        for (int i = 0; i < autowiredFields.length; i++) {
-            Field autowiredField = autowiredFields[i];
-            Object autowiredFieldDependency = model.getAutowiredFieldDependencyInstances()[i];
+        System.out.println(model.getInstance());
+        for (int i = 0; i < model.getAutowiredFields().length; i++) {
             try {
-                autowiredField.set(instance, autowiredFieldDependency);
+                model.getAutowiredFields()[i].set(model.getInstance(),  model.getAutowiredFieldDependencyInstances()[i]);
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
@@ -110,23 +106,22 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
     }
 
     private void addAvailableInstance(InstantiationModel model) {
-        Object instance = model.getInstance();
-        String instanceId = instance.getClass().getName();
-        Class<?> type = instance.getClass();
+        Class<?> type = model.getType();
+        String instanceId = type.getName();
 
         if(type.isAnnotationPresent(Service.class)) {
             Service service = type.getAnnotation(Service.class);
-            instanceId = service.id();
+            if(!service.id().equals("")) instanceId = service.id();
         }
 
         if(type.isAnnotationPresent(Component.class)) {
             Component component = type.getAnnotation(Component.class);
-            instanceId = component.id();
+            if(!component.id().equals("")) instanceId = component.id();
         }
 
         if(type.isAnnotationPresent(Repository.class)) {
             Repository repository = type.getAnnotation(Repository.class);
-            instanceId = repository.id();
+            if(!repository.id().equals("")) instanceId = repository.id();
         }
 
         if (this.availableInstances.containsKey(instanceId)) {
@@ -137,7 +132,7 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
             throw new DuplicatedIdentifierException(errorMessage);
         }
 
-        this.availableInstances.put(instanceId, instance);
+        this.availableInstances.put(instanceId, model.getInstance());
     }
 
     public void invokePostConstructMethod(InstantiationModel model) {

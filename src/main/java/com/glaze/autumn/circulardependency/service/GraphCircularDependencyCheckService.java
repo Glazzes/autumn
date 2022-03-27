@@ -6,6 +6,7 @@ import com.glaze.autumn.clscanner.model.ClassModel;
 import com.glaze.autumn.instantiator.exception.ComponentNotFoundException;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -58,6 +59,13 @@ public class GraphCircularDependencyCheckService implements CircularDependencyCh
         return dependencyGraph;
     }
 
+    private Collection<Class<?>> getBeans(Set<ClassModel> models) {
+        return models.stream()
+                .flatMap(it -> Arrays.stream(it.getBeans()))
+                .map(Method::getReturnType)
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
     private void checkCircularDependenciesRecursively(Class<?> currentNode, Stack<Class<?>> currentBranch){
         if(currentBranch.contains(currentNode)) {
             if(currentNode == currentBranch.peek()) {
@@ -69,23 +77,18 @@ public class GraphCircularDependencyCheckService implements CircularDependencyCh
             throw new CircularDependencyCheckException(errorMessage);
         }
 
-        currentBranch.add(currentNode);
-
-        Set<Class<?>> currentNodeDependencies = this.graph.get(currentNode);
-        if(currentNode.isInterface()) {
-            currentNodeDependencies = this.getDependenciesForInterface(currentNode);
-        }
-
+        Set<Class<?>> currentNodeDependencies = this.getDependencies(currentNode);
         if(currentNodeDependencies == null) {
             Class<?> previousNode = currentBranch.peek();
             String errorMessage = String.format(
-                    "%s requires a bean of type %s that could not be found",
-                    previousNode.getName(),
+                    "%s requires a bean of type %s that could not be found in your project",
+                    previousNode,
                     currentNode.getName());
 
             throw new ComponentNotFoundException(errorMessage);
         }
 
+        currentBranch.add(currentNode);
         for(Class<?> dependency : currentNodeDependencies) {
             this.checkCircularDependenciesRecursively(dependency, currentBranch);
         }
@@ -93,11 +96,18 @@ public class GraphCircularDependencyCheckService implements CircularDependencyCh
         currentBranch.pop();
     }
 
-    private Set<Class<?>> getDependenciesForInterface(Class<?> clazz) {
+    private Set<Class<?>> getDependencies(Class<?> currentNode) {
         Set<Class<?>> dependencies = null;
-        for (Class<?> key : this.graph.keySet()) {
-            if (clazz.isAssignableFrom(key)) {
-                dependencies = this.graph.get(key);
+        if(currentNode.isInterface()) {
+            for (Class<?> key : this.graph.keySet()) {
+                if (currentNode.isAssignableFrom(key)) {
+                    dependencies = this.graph.get(key);
+                    break;
+                }
+            }
+        }else {
+            if(this.graph.containsKey(currentNode)) {
+                dependencies = this.graph.get(currentNode);
             }
         }
 

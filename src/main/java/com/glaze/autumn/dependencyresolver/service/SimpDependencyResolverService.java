@@ -24,20 +24,18 @@ public class SimpDependencyResolverService implements DependencyResolverService 
             if(currentField.isAnnotationPresent(Qualifier.class)){
                 Qualifier qualifier = currentField.getAnnotation(Qualifier.class);
                 Object instance = availableInstances.get(qualifier.id());
+                if(instance == null) continue;
 
-                if(currentFieldType.isAssignableFrom(instance.getClass()) && currentInstance == null) {
-                    model.getAutowiredFieldDependencyInstances()[i] = instance;
-                    continue;
-                }
+                model.getAutowiredFieldDependencyInstances()[i] = instance;
+                System.out.println(model.getAutowiredFieldDependencyInstances()[i]);
+                continue;
             }
 
             for (Object instance : availableInstances.values()) {
-                if(currentFieldType.isAssignableFrom(instance.getClass())
-                        && model.getAutowiredFieldDependencyInstances()[i] == null){
+                if(currentFieldType.isAssignableFrom(instance.getClass())){
                     model.getAutowiredFieldDependencyInstances()[i] = instance;
                 }
             }
-
         }
     }
 
@@ -55,17 +53,18 @@ public class SimpDependencyResolverService implements DependencyResolverService 
 
             // Attempt id based look up if possible
             String qualifierId = this.getQualifierAnnotationId(constructorAnnotations);
-            Object availableInstance = availableInstances.get(qualifierId);
-            if(qualifierId != null && availableInstance != null){
-                model.getAutowiredFieldDependencyInstances()[i] = availableInstance;
+            if(qualifierId != null) {
+                Object availableInstance = availableInstances.get(qualifierId);
+                if(availableInstance == null) continue;
+
+                model.getConstructorDependencyInstances()[i] = availableInstance;
                 continue;
             }
 
             // Attempt brute force look up
             for (Object dependency : availableInstances.values()) {
-                if(currentDependencyType.isAssignableFrom(dependency.getClass()) && currentConstructorInstance == null){
+                if(currentDependencyType.isAssignableFrom(dependency.getClass())){
                     model.getConstructorDependencyInstances()[i] = dependency;
-                    System.out.println("added cons");
                 }
             }
 
