@@ -5,7 +5,7 @@ import java.util.*;
 public class CircularDependencyExceptionHandler {
     private final StringBuilder builder = new StringBuilder();
 
-    public void handleCircularDependencyConflict(Class<?> causedBy, Stack<Class<?>> currentBranch) {
+    public String getErrorMessage(Class<?> causedBy, Stack<Class<?>> currentBranch) {
         List<Class<?>> inBetweenClasses = this.getInBetweenClasses(causedBy, currentBranch.stream().toList());
 
         builder.append("""
@@ -17,8 +17,8 @@ public class CircularDependencyExceptionHandler {
         builder.append("""
         |_______|
         """);
-        String errorMessage = builder.toString();
-        throw new CircularDependencyCheckException(errorMessage);
+
+        return builder.toString();
     }
 
     private List<Class<?>> getInBetweenClasses(Class<?> conflictingClass, List<Class<?>> nodes) {

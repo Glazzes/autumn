@@ -35,7 +35,7 @@ public class SimpClassScannerService implements ClassScannerService {
                 .map(this::newClassModelInstance)
                 .collect(Collectors.toSet());
 
-        logger.log(Level.INFO, "Project classes loaded successfully");
+        logger.info("Project classes loaded successfully ✅");
         return model;
     }
 
@@ -52,9 +52,10 @@ public class SimpClassScannerService implements ClassScannerService {
 
     private boolean findClassFiles(Class<?> cls){
         return !cls.isInterface()
-               && !cls.isEnum()
-               && !cls.isAnnotation()
-               && !cls.isPrimitive();
+                && !cls.isEnum()
+                && !cls.isAnnotation()
+                && !cls.isAnonymousClass()
+                && !cls.isPrimitive();
     }
 
     private boolean findComponentClasses(Class<?> cls){

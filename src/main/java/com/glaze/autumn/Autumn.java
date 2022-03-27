@@ -1,7 +1,5 @@
 package com.glaze.autumn;
 
-import com.glaze.autumn.annotations.Autowired;
-import com.glaze.autumn.annotations.Component;
 import com.glaze.autumn.application.CommandLineRunner;
 import com.glaze.autumn.application.exception.AutumnApplicationException;
 import com.glaze.autumn.circulardependency.service.GraphCircularDependencyCheckService;
@@ -14,7 +12,6 @@ import com.glaze.autumn.clslocator.service.DirectoryClassLocatorService;
 import com.glaze.autumn.clslocator.service.JarFileClassLocatorService;
 import com.glaze.autumn.instantiator.service.SimpClassInstantiationService;
 import com.glaze.autumn.clscanner.service.SimpClassScannerService;
-import com.glaze.autumn.test.Two;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -22,25 +19,13 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-@Component
-public class Autumn implements CommandLineRunner {
-    @Autowired private Two two;
-
+public class Autumn {
     private static final Logger logger = java.util.logging.Logger.getLogger(Autumn.class.getCanonicalName());
 
-    @Override
-    public void run() {
-        System.out.println(two);
-    }
-
-    public static void main(String[] args) {
-        run(Autumn.class);
-    }
-
     public static void run(Class<?> startUpClass){
-        logger.log(Level.INFO, "Starting application!");
+        logger.log(Level.INFO, "Starting application \uD83D\uDD25!");
         Environment environment = resolveEnvironment(startUpClass);
-        Collection<Class<?>> loadedClasses = loadClasses(environment, startUpClass);
+        Collection<Class<?>> loadedClasses = locateClasses(environment, startUpClass);
 
         var scannerService = new SimpClassScannerService(loadedClasses);
         Set<ClassModel> suitableClasses =  scannerService.scanProjectClasses();
@@ -65,21 +50,19 @@ public class Autumn implements CommandLineRunner {
         return new Environment(clsPath, type);
     }
 
-    private static Collection<Class<?>> loadClasses(Environment environment, Class<?> startUpClass) {
+    private static Collection<Class<?>> locateClasses(Environment environment, Class<?> startUpClass) {
         ClassLocatorService locatorService = environment.getType() == EnvironmentType.JAR_FILE
                 ? new JarFileClassLocatorService(startUpClass)
                 : new DirectoryClassLocatorService(startUpClass);
 
-        Collection<Class<?>> loadedClasses = locatorService.getProjectClasses(environment);
-        logger.info("Project classes loaded successfully ✅");
-        return loadedClasses;
+        Collection<Class<?>> projectClasses = locatorService.getProjectClasses(environment);
+        projectClasses.add(startUpClass);
+        return projectClasses;
     }
 
     private static void scanCircularDependencies(Class<?> startUpClass, Set<ClassModel> suitableClasses) {
-        logger.log(Level.INFO, "Look for circular dependencies in your project... \uD83D\uDCA4");
         var circularDependencyDetectionService = new GraphCircularDependencyCheckService(suitableClasses, startUpClass);
         circularDependencyDetectionService.checkProjectDependencies();
-        logger.log(Level.INFO ,"No circular dependencies detected ✅");
     }
 
     private static Object instantiateClasses(Class<?> startupClass, Set<ClassModel> suitableClasses) {
@@ -90,7 +73,7 @@ public class Autumn implements CommandLineRunner {
                 .stream()
                 .filter(instance -> instance.getClass().equals(startupClass))
                 .findFirst()
-                .orElseThrow(() -> new AutumnApplicationException("Could not find main class"));
+                .orElseThrow(() -> new AutumnApplicationException("Main class not found"));
     }
 
     private static void runApplication(Object instance){

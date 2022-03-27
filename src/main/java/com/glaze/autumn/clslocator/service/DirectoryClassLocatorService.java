@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
@@ -25,24 +26,30 @@ public class DirectoryClassLocatorService implements ClassLocatorService {
     @Override
     public Collection<Class<?>> getProjectClasses(Environment environment) {
         String[] basePackages = ClassUtils.getBasePackages(startUpClass);
-        Collection<Class<?>> sourceCodeClasses = this.loadClassesFromSourceCode(environment.getPath());
 
         if(basePackages == null) {
-            return sourceCodeClasses;
+            return this.loadAllSourceCodeClasses(environment.getPath());
         }
 
-        Collection<JarFile> dependencies = FileUtils.getJarDependencies(this.startUpClass);
+        Collection<Class<?>> classes = new HashSet<>();
+        Collection<JarFile> dependencies = FileUtils.getJarDependencies();
+
+        ComponentScanService componentScanService = new ComponentScanService(basePackages);
+        componentScanService.findSourceCodeClassesFromFileSystem(environment);
+        Collection<Class<?>> sourceCodeClasses = ClassUtils.loadClasses(componentScanService.getClasses());
+
+        classes.addAll(sourceCodeClasses);
         for (JarFile dependency : dependencies) {
-            ComponentScanService componentScanService = new ComponentScanService(basePackages);
+            componentScanService.clear();
             componentScanService.findJarEntriesRecursively(dependency);
             Collection<Class<?>> jarClasses = ClassUtils.loadClasses(componentScanService.getClasses());
-            sourceCodeClasses.addAll(jarClasses);
+            classes.addAll(jarClasses);
         }
 
-        return sourceCodeClasses;
+        return classes;
     }
 
-    private Set<Class<?>> loadClassesFromSourceCode(String path) {
+    private Set<Class<?>> loadAllSourceCodeClasses(String path) {
         Path currentPath = Paths.get(path);
         try{
             return Files.walk(currentPath)

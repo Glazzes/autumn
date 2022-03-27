@@ -19,7 +19,7 @@ public class JarFileClassLocatorService implements ClassLocatorService {
     }
 
     @Override
-    public Set<Class<?>> getProjectClasses(Environment environment) {
+    public Collection<Class<?>> getProjectClasses(Environment environment) {
         try{
             JarFile jarFile = new JarFile(new File(environment.getPath()));
             String[] basePackages =  ClassUtils.getBasePackages(this.startUpClass);
@@ -28,7 +28,10 @@ public class JarFileClassLocatorService implements ClassLocatorService {
                 return this.loadClassesFromSingleJar(jarFile);
             }
 
-            return this.loadClassesFromAllProjectJars(jarFile, basePackages);
+            ComponentScanService componentScanService = new ComponentScanService(basePackages);
+            componentScanService.findSourceCodeClassesFromJar(jarFile);
+            componentScanService.findJarEntriesRecursively(jarFile);
+            return ClassUtils.loadClasses(componentScanService.getClasses());
         }catch (Exception e) {
             throw new AutumnApplicationException("We could not locate project's path");
         }
@@ -47,25 +50,4 @@ public class JarFileClassLocatorService implements ClassLocatorService {
                 })
                 .collect(Collectors.toSet());
     }
-
-    private Set<Class<?>> loadClassesFromAllProjectJars(JarFile jarFile, String[] basePackages) {
-        try {
-            ComponentScanService componentScanService = new ComponentScanService(basePackages);
-            componentScanService.findJarEntriesRecursively(jarFile);
-
-            return componentScanService.getClasses()
-                    .stream()
-                    .map(it -> {
-                        try{
-                            return Class.forName(it);
-                        }catch (ClassNotFoundException e) {
-                            throw new AutumnApplicationException("Could not load class " + it);
-                        }
-                    })
-                    .collect(Collectors.toSet());
-        }catch (Exception e) {
-            throw new AutumnApplicationException("Could not load all projects from jar for further scanning");
-        }
-    }
-
 }

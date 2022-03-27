@@ -1,5 +1,9 @@
 package com.glaze.autumn.instantiator.service;
 
+import com.glaze.autumn.annotations.Bean;
+import com.glaze.autumn.annotations.Component;
+import com.glaze.autumn.annotations.Repository;
+import com.glaze.autumn.annotations.Service;
 import com.glaze.autumn.clscanner.model.ClassModel;
 import com.glaze.autumn.dependencyresolver.service.DependencyResolverService;
 import com.glaze.autumn.dependencyresolver.service.MissingDependencyHandler;
@@ -108,6 +112,22 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
     private void addAvailableInstance(InstantiationModel model) {
         Object instance = model.getInstance();
         String instanceId = instance.getClass().getName();
+        Class<?> type = instance.getClass();
+
+        if(type.isAnnotationPresent(Service.class)) {
+            Service service = type.getAnnotation(Service.class);
+            instanceId = service.id();
+        }
+
+        if(type.isAnnotationPresent(Component.class)) {
+            Component component = type.getAnnotation(Component.class);
+            instanceId = component.id();
+        }
+
+        if(type.isAnnotationPresent(Repository.class)) {
+            Repository repository = type.getAnnotation(Repository.class);
+            instanceId = repository.id();
+        }
 
         if (this.availableInstances.containsKey(instanceId)) {
             String errorMessage = String.format("""
@@ -141,6 +161,9 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
             for (Method method : beans) {
                 Object beanInstance = method.invoke(instance);
                 String beanId = method.getName();
+
+                Bean bean = method.getAnnotation(Bean.class);
+                if (!bean.id().equals("")) beanId = bean.id();
 
                 boolean exists = availableInstances.containsKey(beanId);
                 if (exists) {

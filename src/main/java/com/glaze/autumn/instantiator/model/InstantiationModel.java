@@ -1,8 +1,6 @@
 package com.glaze.autumn.instantiator.model;
 
-import com.glaze.autumn.annotations.Qualifier;
 import com.glaze.autumn.clscanner.model.ClassModel;
-import com.glaze.autumn.instantiator.exception.ComponentNotFoundException;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
@@ -51,63 +49,6 @@ public class InstantiationModel {
         if(this.autowiredFieldDependencyInstances.length == 0) return true;
         return Arrays.stream(this.autowiredFieldDependencyInstances)
                 .noneMatch(Objects::isNull);
-    }
-
-    public void onUnresolvedAutowiredFieldDependencies(){
-        if(this.autowiredFields == null) return;
-
-        for(int dep = 0; dep < autowiredFields.length; dep++){
-            Field currentField = autowiredFields[dep];
-            if(currentField.isAnnotationPresent(Qualifier.class) && autowiredFieldDependencyInstances[dep] == null){
-                Qualifier qualifier = currentField.getAnnotation(Qualifier.class);
-                String errorMessage = String.format("""
-                %s required a bean of type %s with id %s that could not be found, consider declaring one.
-                """, this.getType(), currentField.getType(), qualifier.id());
-
-                throw new ComponentNotFoundException(errorMessage);
-            }
-        }
-    }
-
-    public void onUnresolvedConstructorDependencies(){
-        for(int dep = 0; dep < constructorParameterTypes.length; dep++){
-            Class<?> dependencyType = constructorParameterTypes[dep];
-            Object instance = constructorDependencyInstances[dep];
-            Annotation[] dependencyAnnotations = constructorParameterAnnotations[dep];
-
-            if(dependencyAnnotations != null && dependencyAnnotations.length > 0){
-                Qualifier qualifier = null;
-                for(Annotation ann : dependencyAnnotations){
-                    if(Qualifier.class.isAssignableFrom(ann.getClass())){
-                        qualifier = (Qualifier) ann;
-                        break;
-                    }
-                }
-
-                if(qualifier != null && instance == null){
-                    String errorMessage = String.format(
-                            """
-                            Constructor of %s required a bean of type %s with id "%s" that could not be found, consider
-                            declaring one.
-                            """,
-                            this.getType(),
-                            dependencyType,
-                            qualifier.id()
-                    );
-
-                    throw new ComponentNotFoundException(errorMessage);
-                }
-            }
-
-            if(instance == null){
-                Class<?> type = this.getType();
-                String errorMessage = String.format("""
-                Constructor of %s required a bean of type %s that could not be found or instantiated properly
-                """, type, constructorParameterTypes[dep]);
-
-                throw new ComponentNotFoundException(errorMessage);
-            }
-        }
     }
 
     public Annotation[][] getConstructorParameterAnnotations() {

@@ -4,6 +4,7 @@ import com.glaze.autumn.annotations.Qualifier;
 import com.glaze.autumn.instantiator.exception.ComponentNotFoundException;
 import com.glaze.autumn.instantiator.model.InstantiationModel;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.Collection;
 
@@ -17,7 +18,7 @@ public class SimpMissingDependencyHandler implements MissingDependencyHandler {
                 Object dependency = model.getConstructorDependencyInstances()[dep];
                 if (dependency == null) {
                     String errorMessage = String.format(
-                            "%s's required a bean of type %s that could not be found, consider declaring one.",
+                            "Constructor of %s's required a bean of type %s, that could not be found, consider declaring one.",
                             model.getType(),
                             model.getConstructorParameterTypes()[dep]
                     );

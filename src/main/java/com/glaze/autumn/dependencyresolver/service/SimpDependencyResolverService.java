@@ -24,6 +24,7 @@ public class SimpDependencyResolverService implements DependencyResolverService 
             if(currentField.isAnnotationPresent(Qualifier.class)){
                 Qualifier qualifier = currentField.getAnnotation(Qualifier.class);
                 Object instance = availableInstances.get(qualifier.id());
+
                 if(currentFieldType.isAssignableFrom(instance.getClass()) && currentInstance == null) {
                     model.getAutowiredFieldDependencyInstances()[i] = instance;
                     continue;
