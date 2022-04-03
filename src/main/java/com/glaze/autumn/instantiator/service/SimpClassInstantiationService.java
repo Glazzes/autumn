@@ -95,7 +95,6 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
         if (model.getAutowiredFields() == null) return;
         if (model.getAutowiredFields().length == 0) return;
 
-        System.out.println(model.getInstance());
         for (int i = 0; i < model.getAutowiredFields().length; i++) {
             try {
                 model.getAutowiredFields()[i].set(model.getInstance(),  model.getAutowiredFieldDependencyInstances()[i]);

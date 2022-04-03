@@ -18,6 +18,7 @@ public class GraphCircularDependencyCheckService implements CircularDependencyCh
 
     private final Class<?> startUpClass;
     private final Set<ClassModel> classModels;
+    private final Collection<Class<?>> beans;
     private final Map<Class<?>, Set<Class<?>>> graph;
 
     public GraphCircularDependencyCheckService(
@@ -26,6 +27,11 @@ public class GraphCircularDependencyCheckService implements CircularDependencyCh
     ){
         this.classModels = classModels;
         this.startUpClass = startUpClass;
+        this.beans = classModels.stream()
+                .flatMap(it -> Arrays.stream(it.getBeans()))
+                .map(Method::getReturnType)
+                .collect(Collectors.toCollection(HashSet::new));
+
         this.graph = this.buildDependencyGraph();
     }
 
@@ -59,13 +65,6 @@ public class GraphCircularDependencyCheckService implements CircularDependencyCh
         return dependencyGraph;
     }
 
-    private Collection<Class<?>> getBeans(Set<ClassModel> models) {
-        return models.stream()
-                .flatMap(it -> Arrays.stream(it.getBeans()))
-                .map(Method::getReturnType)
-                .collect(Collectors.toCollection(HashSet::new));
-    }
-
     private void checkCircularDependenciesRecursively(Class<?> currentNode, Stack<Class<?>> currentBranch){
         if(currentBranch.contains(currentNode)) {
             if(currentNode == currentBranch.peek()) {
@@ -79,6 +78,10 @@ public class GraphCircularDependencyCheckService implements CircularDependencyCh
 
         Set<Class<?>> currentNodeDependencies = this.getDependencies(currentNode);
         if(currentNodeDependencies == null) {
+            if(this.beans.contains(currentNode)) {
+                return;
+            }
+
             Class<?> previousNode = currentBranch.peek();
             String errorMessage = String.format(
                     "%s requires a bean of type %s that could not be found in your project",
