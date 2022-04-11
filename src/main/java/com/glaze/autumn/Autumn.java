@@ -1,17 +1,17 @@
 package com.glaze.autumn;
 
 import com.glaze.autumn.application.CommandLineRunner;
-import com.glaze.autumn.application.exception.AutumnApplicationException;
-import com.glaze.autumn.circulardependency.service.GraphCircularDependencyCheckService;
-import com.glaze.autumn.clscanner.model.ClassModel;
-import com.glaze.autumn.clslocator.constants.FileConstants;
-import com.glaze.autumn.clslocator.enums.EnvironmentType;
-import com.glaze.autumn.clslocator.model.Environment;
-import com.glaze.autumn.clslocator.service.ClassLocatorService;
-import com.glaze.autumn.clslocator.service.DirectoryClassLocatorService;
-import com.glaze.autumn.clslocator.service.JarFileClassLocatorService;
-import com.glaze.autumn.instantiator.service.SimpClassInstantiationService;
-import com.glaze.autumn.clscanner.service.SimpClassScannerService;
+import com.glaze.autumn.enums.FileExtension;
+import com.glaze.autumn.exceptions.AutumnApplicationException;
+import com.glaze.autumn.services.circulardependencyscanner.GraphCircularDependencyCheckService;
+import com.glaze.autumn.models.ClassModel;
+import com.glaze.autumn.enums.EnvironmentType;
+import com.glaze.autumn.models.Environment;
+import com.glaze.autumn.services.clazzlocator.ClassLocatorService;
+import com.glaze.autumn.services.clazzlocator.DirectoryClassLocatorService;
+import com.glaze.autumn.services.clazzlocator.JarFileClassLocatorService;
+import com.glaze.autumn.services.clazzinstantiator.SimpClassInstantiationService;
+import com.glaze.autumn.services.clazzscanner.SimpClassScannerService;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -41,7 +41,7 @@ public class Autumn {
                 .getLocation()
                 .getFile();
 
-        EnvironmentType type = clsPath.endsWith(FileConstants.JAR_EXTENSION)
+        EnvironmentType type = clsPath.endsWith(FileExtension.JAR.getValue())
                 ? EnvironmentType.JAR_FILE
                 : EnvironmentType.DIRECTORY;
 

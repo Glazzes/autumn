@@ -1,14 +1,14 @@
 ## Autumn DI container
 
 ### About this project
-Spring boot is by far the most used Java framework today and
-something that caught my eye was the dependency injection
-container and how it "magically" injects the right instances 
-into your classes.
+Spring boot is now days by far the most used Java web framework, and
+well, something that caught my eye it's how it magically instantiates and injects
+your classes.
 
-The main goal of this project is to get a decent understanding
-of how java.lang.reflect package can be used to manipulate bytecode
-at execution time to create new libraries.
+### Projects goals
+- Get a decent understanding of how java.lang.reflect package can be used to 
+create Java libraries
+- Build the project solely with what Java's core offers (Done!!!)  
 
 ### Features
 * Field based injection
@@ -17,8 +17,14 @@ at execution time to create new libraries.
 * @Qualifer constructor based injection
 * Bean method instantiation
 * Circular dependency injection detection
-* Multi project build support through  @ComponentScan annotation and "Jar in Jar" introspection
-* Bean based circular dependency check (TODO)
+* Multi project build support through @ComponentScan annotation and "Jar in Jar" introspection
+* Bean based circular dependency check
+
+### Examples
+As this project takes heavy inspiration after Spring boot's DI container, its usage
+it's algo based annotations, you can find examples for Java, Kotlin and multi
+project build in this repository [this repository](https://github.com/Glazzes/autumnexample)
+
 
 ### Building the project
 This library is not intended to be used in production this is only a 
@@ -39,11 +45,6 @@ repositories {
    other repositories...
 }
 ```
-As the description says, this project is based on Spring boot's DI
-container, therefore it's usage is very similar, you can find an autumn example
-in [this repository](https://github.com/Glazzes/autumnexample) both for Java and
-Kotlin.
-
 Remember to add the respective artifacts for your favorite build tool.
 
 Maven
