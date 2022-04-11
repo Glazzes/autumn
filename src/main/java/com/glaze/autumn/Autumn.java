@@ -1,8 +1,9 @@
 package com.glaze.autumn;
 
-import com.glaze.autumn.application.CommandLineRunner;
+import com.glaze.autumn.annotations.MainMethod;
 import com.glaze.autumn.enums.FileExtension;
 import com.glaze.autumn.exceptions.AutumnApplicationException;
+import com.glaze.autumn.exceptions.InvalidMethodSignatureException;
 import com.glaze.autumn.services.circulardependencyscanner.GraphCircularDependencyCheckService;
 import com.glaze.autumn.models.ClassModel;
 import com.glaze.autumn.enums.EnvironmentType;
@@ -45,7 +46,7 @@ public class Autumn {
                 ? EnvironmentType.JAR_FILE
                 : EnvironmentType.DIRECTORY;
 
-        String emoji = type.toString().toLowerCase().equals("directory") ? " 📁" : " \uD83D\uDDC3️";
+        String emoji = type.toString().equalsIgnoreCase("directory") ? " 📁" : " \uD83D\uDDC3️";
         logger.info("Running as a " + type.toString().toLowerCase() + emoji);
         return new Environment(clsPath, type);
     }
@@ -80,14 +81,25 @@ public class Autumn {
         Class<?> instanceType = instance.getClass();
         logger.info("Application started \uD83C\uDF1F");
 
-        if(CommandLineRunner.class.isAssignableFrom(instanceType)){
-            try{
-                Method runMethod = instanceType.getMethod("run");
-                if(runMethod.getReturnType().equals(void.class)
-                        && runMethod.getParameterCount() == 0){
-                    runMethod.invoke(instance);
+        Method mainMethod = null;
+        for(Method method : instanceType.getDeclaredMethods()) {
+            if(method.isAnnotationPresent(MainMethod.class)) {
+                if(method.getParameterCount() == 0 && method.getReturnType().equals(void.class)) {
+                    mainMethod = method;
+                    mainMethod.setAccessible(true);
+                    break;
+                }else {
+                    throw new InvalidMethodSignatureException("""
+                    Methods annotated with @MainMethod must take no arguments and a return type of void
+                    """);
                 }
-            }catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e){
+            }
+        }
+
+        if(mainMethod != null) {
+            try{
+                mainMethod.invoke(instance);
+            }catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
             }
         }

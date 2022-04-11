@@ -13,8 +13,8 @@ create Java libraries
 ### Features
 * Field based injection
 * Constructor based injection
-* @Qualifer field bean injection
-* @Qualifer constructor based injection
+* @Qualifier field bean injection
+* @Qualifier constructor based injection
 * Bean method instantiation
 * Circular dependency injection detection
 * Multi project build support through @ComponentScan annotation and "Jar in Jar" introspection
@@ -37,7 +37,7 @@ maven local repository.
 
 ### Usage
 If you're using Maven this one will recognize by default all local 
-libraries if any, but if you're running it with gradle you'll need to add
+libraries if any, if you're using gradle you'll need to add
 mavenLocal() into repositories closure of your `build.gradle` file.
 ```
 repositories {
@@ -52,16 +52,16 @@ Maven
 <dependency>
     <groupId>com.glaze.autumn</groupId>
     <artifactId>glaze-autumn</artifactId>
-    <version>1.3</version>
+    <version>1.4</version>
 </dependency>
 ```
 
 Gradle
 ```
-implementation 'com.glaze.autumn:glaze-autumn:1.3'
+implementation 'com.glaze.autumn:glaze-autumn:1.4'
 ```
 
 Gradle kts
 ```
-implementation("com.glaze.autumn:glaze-autumn:1.3")
+implementation("com.glaze.autumn:glaze-autumn:1.4")
 ```

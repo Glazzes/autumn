@@ -5,14 +5,14 @@ plugins {
 }
 
 group 'glaze-autumn'
-version '1.3'
+version '1.4'
 
 publishing {
     publications {
         maven(MavenPublication) {
             groupId = 'com.glaze.autumn'
             artifactId = 'glaze-autumn'
-            version = '1.3'
+            version = '1.4'
 
             from components.java
         }
