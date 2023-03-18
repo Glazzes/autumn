@@ -1,4 +1,4 @@
-## Autumn DI container
+## Autumn DI container 🍁
 
 ### About this project
 Spring boot is now days by far the most used Java web framework, and
@@ -8,7 +8,7 @@ your classes.
 ### Projects goals
 - Get a decent understanding of how java.lang.reflect package can be used to 
 create Java libraries
-- Build the project solely with what Java's core offers (Done!!!)  
+- Build the project only with Java's core (Done 🎉) 
 
 ### Features
 * Field based injection
@@ -22,7 +22,7 @@ create Java libraries
 
 ### Examples
 As this project takes heavy inspiration after Spring boot's DI container, its usage
-it's algo based annotations, you can find examples for Java, Kotlin and multi
+is also based annotations, you can find examples for Java, Kotlin and multi
 project build in this repository [this repository](https://github.com/Glazzes/autumnexample)
 
 
@@ -38,7 +38,7 @@ maven local repository.
 ### Usage
 If you're using Maven this one will recognize by default all local 
 libraries if any, if you're using gradle you'll need to add
-mavenLocal() into repositories closure of your `build.gradle` file.
+mavenLocal() into repositories plugin of your `build.gradle` file.
 ```
 repositories {
    mavenLocal() // <- add this
@@ -52,16 +52,16 @@ Maven
 <dependency>
     <groupId>com.glaze.autumn</groupId>
     <artifactId>glaze-autumn</artifactId>
-    <version>1.4</version>
+    <version>0.1</version>
 </dependency>
 ```
 
 Gradle
 ```
-implementation 'com.glaze.autumn:glaze-autumn:1.4'
+implementation 'com.glaze.autumn:glaze-autumn:0.1'
 ```
 
-Gradle kts
+Gradle kotlin
 ```
-implementation("com.glaze.autumn:glaze-autumn:1.4")
+implementation("com.glaze.autumn:glaze-autumn:0.1")
 ```

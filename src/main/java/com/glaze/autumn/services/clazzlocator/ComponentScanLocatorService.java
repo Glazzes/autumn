@@ -15,6 +15,7 @@ import java.util.jar.JarFile;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 
 public class ComponentScanLocatorService {
@@ -23,6 +24,7 @@ public class ComponentScanLocatorService {
     private final Set<String> classes = new HashSet<>();
     private final String tempDir = System.getProperty("java.io.tmpdir");
 
+    private final String fileSeparator = System.getProperty("file.separator");
     private final String folderRegex = "(\\\\\\\\|/)";
 
     public ComponentScanLocatorService(String[] packages) {
@@ -38,24 +40,36 @@ public class ComponentScanLocatorService {
     }
 
     public void findSourceCodeClassesFromFileSystem(Environment environment) {
-        try{
-            Files.walk(Paths.get(environment.getPath()))
-                    .filter(it -> !Files.isDirectory(it))
+        Path jarLocation = Paths.get(environment.getPath());
+        try(Stream<Path> paths = Files.walk(jarLocation)){
+            Set<String> entries = paths.filter(it -> !Files.isDirectory(it))
                     .map(Path::toString)
                     .filter(s -> s.endsWith(FileExtension.CLASS.getValue()))
-                    .collect(Collectors.toCollection(HashSet::new))
-                    .forEach(this::addToClasses);
+                    .collect(Collectors.toCollection(HashSet::new));
+
+            for(String entryName : entries) {
+                String className = this.convertEntryToClassName(entryName);
+                if(className != null) {
+                    this.classes.add(className);
+                }
+            }
         }catch (IOException e){
             e.printStackTrace();
         }
     }
 
     public void findSourceCodeClassesFromJar(JarFile file) {
-        file.stream()
+        Set<String> classes = file.stream()
                 .map(ZipEntry::getName)
                 .filter(it -> it.endsWith(FileExtension.JAR.getValue()))
-                .collect(Collectors.toCollection(HashSet::new))
-                .forEach(this::addToClasses);
+                .collect(Collectors.toCollection(HashSet::new));
+
+        for(String entryName : classes) {
+            String className = this.convertEntryToClassName(entryName);
+            if(className != null) {
+                this.classes.add(className);
+            }
+        }
     }
 
     public void findJarEntriesRecursively(JarFile parentJarFile) {
@@ -67,7 +81,10 @@ public class ComponentScanLocatorService {
             String currentEntryName = currentEntry.getName();
 
             if(currentEntryName.endsWith(FileExtension.CLASS.getValue())) {
-                this.addToClasses(currentEntryName);
+                String className = this.convertEntryToClassName(currentEntryName);
+                if(className != null) {
+                    this.classes.add(className);
+                }
             }
 
             if(currentEntryName.endsWith(FileExtension.JAR.getValue())) {
@@ -83,20 +100,20 @@ public class ComponentScanLocatorService {
         }
     }
 
-    private void addToClasses(String currentEntryName) {
+    private String convertEntryToClassName(String currentEntryName) {
+        String separatorRegex = String.format("\\%s", fileSeparator);
         for(int i = 0; i < packageRoutes.length; i++) {
             Matcher matcher = packagePatterns[i].matcher(currentEntryName);
 
             if(matcher.find()) {
-                String className = currentEntryName
-                        .replaceAll("^.*/(" +  packageRoutes[i] +")", "$1")
-                        .replaceFirst(FileExtension.CLASS.getValue(), "")
-                        .replaceAll("(\\\\|/)", ".");
-
-                this.classes.add(className);
-                break;
+                return currentEntryName
+                    .replaceAll("^.*" + separatorRegex + "(" +  packageRoutes[i] +")", "$1")
+                    .replaceFirst(FileExtension.CLASS.getValue(), "")
+                    .replaceAll(separatorRegex, ".");
             }
         }
+
+        return null;
     }
 
     public Set<String> getClasses() {

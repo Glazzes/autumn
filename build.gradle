@@ -4,20 +4,15 @@ plugins {
     id 'maven-publish'
 }
 
-group 'glaze-autumn'
-version '1.4'
+group 'com.glaze'
+version '0.1'
 
 publishing {
     publications {
         maven(MavenPublication) {
-            groupId = 'com.glaze.autumn'
-            artifactId = 'glaze-autumn'
-            version = '1.4'
-
+            artifactId = 'autumn'
             from components.java
-        }
 
-        mavenJava(MavenPublication){
             pom {
                 name = 'Autumn DI container'
                 description = "A dependency injection container based on spring boot's"
@@ -27,6 +22,7 @@ publishing {
                     developer{
                         id = 'Glaze'
                         name = 'Santiago'
+                        email = 'random@demo.com'
                     }
                 }
             }
