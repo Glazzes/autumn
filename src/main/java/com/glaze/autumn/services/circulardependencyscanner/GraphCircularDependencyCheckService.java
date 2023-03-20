@@ -15,18 +15,12 @@ import java.util.stream.Collectors;
 public class GraphCircularDependencyCheckService implements CircularDependencyCheckService {
     private final Logger logger = Logger.getLogger(this.getClass().getName());
     private final CircularDependencyExceptionFormatter exceptionHandler = new CircularDependencyExceptionFormatter();
-
-    private final Class<?> startUpClass;
     private final Set<ClassModel> classModels;
     private final Collection<Class<?>> beans;
     private final Map<Class<?>, Set<Class<?>>> graph;
 
-    public GraphCircularDependencyCheckService(
-            Set<ClassModel> classModels,
-            Class<?> startUpClass
-    ){
+    public GraphCircularDependencyCheckService(Set<ClassModel> classModels){
         this.classModels = classModels;
-        this.startUpClass = startUpClass;
         this.beans = classModels.stream()
                 .flatMap(it -> Arrays.stream(it.getBeans()))
                 .map(Method::getReturnType)
@@ -36,13 +30,13 @@ public class GraphCircularDependencyCheckService implements CircularDependencyCh
     }
 
     @Override
-    public void checkProjectDependencies() {
-        logger.log(Level.INFO, "Look for circular dependencies in your project... \uD83D\uDCA4");
-
-        Stack<Class<?>> currentBranch = new Stack<>();
+    public void scanProjectDependencies() {
+        logger.log(Level.INFO, "Looking for circular dependencies in your project... \uD83D\uDCA4");
 
         if(!this.graph.isEmpty()) {
-            this.checkCircularDependenciesRecursively(startUpClass, currentBranch);
+            for(Class<?> node : this.graph.keySet()) {
+                this.lookForCircularDependencies(node, new Stack<>());
+            }
         }
 
         logger.log(Level.INFO ,"No circular dependencies detected ✅");
@@ -65,7 +59,7 @@ public class GraphCircularDependencyCheckService implements CircularDependencyCh
         return dependencyGraph;
     }
 
-    private void checkCircularDependenciesRecursively(Class<?> currentNode, Stack<Class<?>> currentBranch){
+    private void lookForCircularDependencies(Class<?> currentNode, Stack<Class<?>> currentBranch){
         if(currentBranch.contains(currentNode)) {
             if(currentNode == currentBranch.peek()) {
                 String errorMessage = currentNode.getName() + " requires a bean of itself that can not be injected";
@@ -76,7 +70,7 @@ public class GraphCircularDependencyCheckService implements CircularDependencyCh
             throw new CircularDependencyCheckException(errorMessage);
         }
 
-        Set<Class<?>> currentNodeDependencies = this.getDependencies(currentNode);
+        Set<Class<?>> currentNodeDependencies = this.getNodeDependencies(currentNode);
         if(currentNodeDependencies == null) {
             if(this.beans.contains(currentNode)) {
                 return;
@@ -93,27 +87,21 @@ public class GraphCircularDependencyCheckService implements CircularDependencyCh
 
         currentBranch.add(currentNode);
         for(Class<?> dependency : currentNodeDependencies) {
-            this.checkCircularDependenciesRecursively(dependency, currentBranch);
+            this.lookForCircularDependencies(dependency, currentBranch);
         }
 
         currentBranch.pop();
     }
 
-    private Set<Class<?>> getDependencies(Class<?> currentNode) {
-        Set<Class<?>> dependencies = null;
+    private Set<Class<?>> getNodeDependencies(Class<?> currentNode) {
         if(currentNode.isInterface()) {
             for (Class<?> key : this.graph.keySet()) {
                 if (currentNode.isAssignableFrom(key)) {
-                    dependencies = this.graph.get(key);
-                    break;
+                    return this.graph.get(key);
                 }
-            }
-        }else {
-            if(this.graph.containsKey(currentNode)) {
-                dependencies = this.graph.get(currentNode);
             }
         }
 
-        return dependencies;
+        return this.graph.get(currentNode);
     }
 }

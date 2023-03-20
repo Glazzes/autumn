@@ -29,7 +29,9 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
 
     public SimpClassInstantiationService(Set<ClassModel> classModels) {
         this.instantiationModels = classModels.stream()
-                .sorted(Comparator.comparing(model -> model.getConstructor().getParameterCount()))
+                .sorted(
+                    Comparator.comparing(model -> model.getConstructor()
+                    .getParameterCount()))
                 .map(InstantiationModel::new)
                 .collect(Collectors.toCollection(ArrayDeque::new));
     }
@@ -39,10 +41,12 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
         logger.info("Instantiating classes \uD83D\uDD25");
 
         int iterations = 0;
-        while (!this.instantiationModels.isEmpty()) {
-            if (iterations > MAXIMUM_NUMBER_OF_ITERATIONS) break;
-            InstantiationModel currentModel = instantiationModels.poll();
+        while(!this.instantiationModels.isEmpty()) {
+            if(iterations >= MAXIMUM_NUMBER_OF_ITERATIONS) {
+                break;
+            }
 
+            InstantiationModel currentModel = instantiationModels.poll();
             dependencyResolverService.resolveConstructorDependencies(currentModel, this.availableInstances);
             dependencyResolverService.resolveAutowiredFieldDependencies(currentModel, this.availableInstances);
 
@@ -107,9 +111,8 @@ public class SimpClassInstantiationService implements ClassInstantiationService 
         String instanceId = this.getInstanceId(type);
 
         if (this.availableInstances.containsKey(instanceId)) {
-            String errorMessage = String.format("""
-                    Can not instantiate %s because id "%s" is already use by another component
-                    """, model.getType(), instanceId);
+            String errorMessage =
+                String.format("Can not instantiate %s because id '%s' is already use by another component", model.getType(), instanceId);
 
             throw new DuplicatedIdentifierException(errorMessage);
         }

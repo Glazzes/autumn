@@ -28,9 +28,9 @@ public class Autumn {
         Environment environment = resolveEnvironment(startUpClass);
         Collection<Class<?>> loadedClasses = locateClasses(environment, startUpClass);
 
-        var scannerService = new SimpClassScannerService(loadedClasses);
+        SimpClassScannerService scannerService = new SimpClassScannerService(loadedClasses);
         Set<ClassModel> suitableClasses =  scannerService.scanProjectClasses();
-        scanCircularDependencies(startUpClass, suitableClasses);
+        scanCircularDependencies(suitableClasses);
 
         Object mainClassInstance = instantiateClasses(startUpClass, suitableClasses);
         runApplication(mainClassInstance);
@@ -61,13 +61,13 @@ public class Autumn {
         return projectClasses;
     }
 
-    private static void scanCircularDependencies(Class<?> startUpClass, Set<ClassModel> suitableClasses) {
-        var circularDependencyDetectionService = new GraphCircularDependencyCheckService(suitableClasses, startUpClass);
-        circularDependencyDetectionService.checkProjectDependencies();
+    private static void scanCircularDependencies(Set<ClassModel> suitableClasses) {
+        GraphCircularDependencyCheckService circularDependencyDetectionService = new GraphCircularDependencyCheckService(suitableClasses);
+        circularDependencyDetectionService.scanProjectDependencies();
     }
 
     private static Object instantiateClasses(Class<?> startupClass, Set<ClassModel> suitableClasses) {
-        var instantiationService = new SimpClassInstantiationService(suitableClasses);
+        SimpClassInstantiationService instantiationService = new SimpClassInstantiationService(suitableClasses);
         instantiationService.instantiate();
 
         return instantiationService.getInstances()
@@ -89,9 +89,7 @@ public class Autumn {
                     mainMethod.setAccessible(true);
                     break;
                 }else {
-                    throw new InvalidMethodSignatureException("""
-                    Methods annotated with @MainMethod must take no arguments and a return type of void
-                    """);
+                    throw new InvalidMethodSignatureException("Methods annotated with @MainMethod must take no arguments and a return type of void");
                 }
             }
         }

@@ -15,6 +15,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.jar.JarFile;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class DirectoryClassLocatorService implements ClassLocatorService {
     private final Class<?> startUpClass;
@@ -51,23 +52,22 @@ public class DirectoryClassLocatorService implements ClassLocatorService {
 
     private Set<Class<?>> loadAllSourceCodeClasses(String path) {
         Path currentPath = Paths.get(path);
-        try{
-            return Files.walk(currentPath)
-                    .filter(p -> !Files.isDirectory(p))
-                    .filter(p -> p.toString().endsWith(FileExtension.CLASS.getValue()))
-                    .map(p -> p.toString()
-                            .replace(path, "")
-                            .replaceAll("[\\\\/]", ".")
-                            .replace(FileExtension.CLASS.getValue(), "")
-                    )
-                    .map(clsName -> {
-                        try{
-                            return Class.forName(clsName);
-                        }catch (ClassNotFoundException e){
-                            throw new ClassLocationException(e.getMessage(), e);
-                        }
-                    })
-                    .collect(Collectors.toSet());
+        try(Stream<Path> paths = Files.walk(currentPath)){
+            return paths.filter(p -> !Files.isDirectory(p))
+                .filter(p -> p.toString().endsWith(FileExtension.CLASS.getValue()))
+                .map(p -> p.toString()
+                        .replace(path, "")
+                        .replaceAll("[\\\\/]", ".")
+                        .replace(FileExtension.CLASS.getValue(), "")
+                )
+                .map(clsName -> {
+                    try{
+                        return Class.forName(clsName);
+                    }catch (ClassNotFoundException e){
+                        throw new ClassLocationException(e.getMessage(), e);
+                    }
+                })
+                .collect(Collectors.toSet());
         }catch (IOException e){
             e.printStackTrace();
             return null;

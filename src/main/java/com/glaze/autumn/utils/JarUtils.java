@@ -6,7 +6,9 @@ import com.glaze.autumn.exceptions.AutumnApplicationException;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashSet;
@@ -18,8 +20,8 @@ import java.util.zip.ZipEntry;
 public class JarUtils {
 
     public static JarFile convertEntryToFile(JarFile parentJar, JarEntry entry, Path destination) {
-        try (var is = ((FileInputStream) parentJar.getInputStream(entry)).getChannel();
-             var outChannel = new FileOutputStream(destination.toFile()).getChannel()
+        try (FileChannel is = ((FileInputStream) parentJar.getInputStream(entry)).getChannel();
+             FileChannel outChannel = new FileOutputStream(destination.toFile()).getChannel()
         ){
             ByteBuffer buffer = ByteBuffer.allocate(8096);
             while (is.read(buffer) != -1) {

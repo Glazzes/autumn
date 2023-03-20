@@ -10,9 +10,7 @@ import com.glaze.autumn.annotations.configuration.Annotations;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -63,20 +61,21 @@ public class SimpClassScannerService implements ClassScannerService {
                 .anyMatch(cls::isAnnotationPresent);
     }
 
-    private Field[] getAutowiredFields(Class<?> cls){
+    private Field[] getAutowiredFields(Class<?> cls) {
         Set<Field> autowiredFields = new HashSet<>();
         for (Field field : cls.getDeclaredFields()) {
-            if(field.isAnnotationPresent(Autowired.class)
-                    && !field.getType().equals(Void.class)
-                    && !field.getType().equals(void.class)
-                    && !field.getType().isPrimitive()
-            ){
+            if (field.isAnnotationPresent(Autowired.class)
+                && !field.getType().equals(Void.class)
+                && !field.getType().equals(void.class)
+                && !field.getType().isPrimitive()
+            ) {
                 field.setAccessible(true);
                 autowiredFields.add(field);
             }
         }
 
-        return autowiredFields.toArray(Field[]::new);
+        return new ArrayList<>(autowiredFields)
+            .toArray(new Field[autowiredFields.size()]);
     }
 
     private Constructor<?> getSuitableConstructor(Class<?> cls){
@@ -99,9 +98,7 @@ public class SimpClassScannerService implements ClassScannerService {
                 if(method.getParameterCount() != 0
                         || !(method.getReturnType().equals(void.class) || method.getReturnType().equals(Void.class) )
                 ){
-                    throw new InvalidMethodSignatureException("""
-                    Methods annotated with @PostConstruct must take no arguments and must not have a return value
-                    """);
+                    throw new InvalidMethodSignatureException("Methods annotated with @PostConstruct must take no arguments and must not have a return value");
                 }
 
                 method.setAccessible(true);
@@ -121,10 +118,7 @@ public class SimpClassScannerService implements ClassScannerService {
                         || method.getReturnType().equals(void.class)
                         || method.getReturnType().equals(Void.class)
                 ){
-                    throw new InvalidMethodSignatureException("""
-                    Methods annotated with @Bean must not take arguments and should not return
-                    void.class or Void.class
-                    """);
+                    throw new InvalidMethodSignatureException("Methods annotated with @Bean must not take arguments and should not return void.class or Void.class");
                 }
 
                 method.setAccessible(true);
@@ -132,7 +126,8 @@ public class SimpClassScannerService implements ClassScannerService {
             }
         }
 
-        return beans.toArray(Method[]::new);
+        return new ArrayList<>(beans)
+            .toArray(new Method[beans.size()]);
     }
 
 }

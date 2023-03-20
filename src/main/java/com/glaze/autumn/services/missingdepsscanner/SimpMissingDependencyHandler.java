@@ -20,9 +20,8 @@ public class SimpMissingDependencyHandler implements MissingDependencyHandler {
                 String id = this.getQualifierAnnotationId(dependencyAnnotations);
 
                 if(id != null && dependency == null) {
-                    String errorMessage = String.format("""
-                    Constructor of %s required a bean of type %s with id "%s" at parameter %d, consider defining one         
-                    """,
+                    String errorMessage = String.format(
+                        "Constructor of %s required a bean of type %s with id '%s' at parameter %d, consider defining one",
                     model.getType(),
                     model.getConstructorParameterTypes()[dep],
                     id,
@@ -69,9 +68,7 @@ public class SimpMissingDependencyHandler implements MissingDependencyHandler {
                 if(currentFieldInstance == null){
                     if(currentField.isAnnotationPresent(Qualifier.class)){
                         Qualifier qualifier = autowiredFields[field].getAnnotation(Qualifier.class);
-                        String errorMessage = String.format("""
-                                %s required a bean at field named "%s" of type %s with id "%s" that could not be found, consider declaring one
-                                """,
+                        String errorMessage = String.format("%s required a bean at field named '%s' of type %s with id '%s' that could not be found, consider declaring one",
                                 model.getType(),
                                 currentField.getName(),
                                 currentField.getType(),

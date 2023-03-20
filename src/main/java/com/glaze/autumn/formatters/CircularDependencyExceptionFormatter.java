@@ -6,17 +6,14 @@ public class CircularDependencyExceptionFormatter {
     private final StringBuilder builder = new StringBuilder();
 
     public String getErrorMessage(Class<?> causedBy, Stack<Class<?>> currentBranch) {
-        List<Class<?>> inBetweenClasses = this.getInBetweenClasses(causedBy, currentBranch.stream().toList());
+        List<Class<?>> classes = new ArrayList<>(currentBranch);
+        List<Class<?>> inBetweenClasses = this.getInBetweenClasses(causedBy, classes);
 
-        builder.append("""
-                A circular dependency has been found among the following classes.\s
-                |¯¯¯¯¯¯¯|
-                """);
+        builder.append("A circular dependency has been found among the following classes\n");
+        builder.append("|¯¯¯¯¯¯|\n");
 
-        this.addClassesToErrorMessage(inBetweenClasses);
-        builder.append("""
-        |_______|
-        """);
+        this.appendClassErrorsToBuilder(inBetweenClasses);
+        builder.append("|______|");
 
         return builder.toString();
     }
@@ -39,13 +36,11 @@ public class CircularDependencyExceptionFormatter {
         return inBetweenClasses;
     }
 
-    private void addClassesToErrorMessage(List<Class<?>> inBetweenClasses) {
+    private void appendClassErrorsToBuilder(List<Class<?>> inBetweenClasses) {
         for(Class<?> clazz : inBetweenClasses) {
-            String toAppend = String.format("""
-            |   %s
-            |      👇
-            """, clazz.getName());
-            builder.append(toAppend);
+            String className = String.format("|   %s\n", clazz.getName());
+            this.builder.append(className);
+            this.builder.append("|      👇\n");
         }
     }
 

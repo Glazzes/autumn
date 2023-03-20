@@ -73,11 +73,11 @@ public class ComponentScanLocatorService {
     }
 
     public void findJarEntriesRecursively(JarFile parentJarFile) {
-        Iterator<JarEntry> entries = parentJarFile.entries().asIterator();
+        Enumeration<JarEntry> entries = parentJarFile.entries();
         Path newParentDestination = Paths.get(tempDir + "/" + UUID.randomUUID() + FileExtension.JAR.getValue());
 
-        while (entries.hasNext()) {
-            JarEntry currentEntry = entries.next();
+        while (entries.hasMoreElements()) {
+            JarEntry currentEntry = entries.nextElement();
             String currentEntryName = currentEntry.getName();
 
             if(currentEntryName.endsWith(FileExtension.CLASS.getValue())) {
