@@ -50,18 +50,18 @@ Remember to add the respective artifacts for your favorite build tool.
 Maven
 ```
 <dependency>
-    <groupId>com.glaze.autumn</groupId>
-    <artifactId>glaze-autumn</artifactId>
+    <groupId>com.glaze</groupId>
+    <artifactId>autumn</artifactId>
     <version>0.1</version>
 </dependency>
 ```
 
 Gradle
 ```
-implementation 'com.glaze.autumn:glaze-autumn:0.1'
+implementation 'com.glaze:autumn:0.1'
 ```
 
 Gradle kotlin
 ```
-implementation("com.glaze.autumn:glaze-autumn:0.1")
+implementation("com.glaze:autumn:0.1")
 ```
